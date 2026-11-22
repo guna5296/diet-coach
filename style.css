@@ -2081,3 +2081,6 @@ body.nav-lock .bottom-nav {
   color: var(--text-sub);
   line-height: 1.65;
 }
+.list-row-btn.danger-row strong {
+  color: var(--danger-color);
+}
