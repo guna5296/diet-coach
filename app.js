@@ -171,6 +171,7 @@
   const views = document.querySelectorAll('.view');
 
   let currentProfile = null;
+  let currentViewKey = 'home';
   let draft = createEmptyDraft();
   let isEditMode = false;
   let toastTimer = null;
@@ -223,6 +224,7 @@
 
   function navigateTo(targetKey) {
     if (!VIEW_TITLES[targetKey]) return;
+    currentViewKey = targetKey;
     views.forEach((view) => view.classList.toggle('active', view.id === `view-${targetKey}`));
     navItems.forEach((btn) => {
       const active = btn.dataset.target === targetKey;
@@ -231,11 +233,15 @@
       else btn.removeAttribute('aria-current');
     });
     headerTitle.textContent = VIEW_TITLES[targetKey];
+
     if (targetKey === 'record') {
       RecordModule.renderRecordView();
     } else if (targetKey === 'home') {
       renderMainAppFromProfile();
+    } else if (targetKey === 'analytics') {
+      AnalyticsModule.render(currentProfile);
     }
+
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
@@ -265,7 +271,7 @@
   }
 
   /* =========================================================
-     ホーム画面・設定画面への実データ反映（フェーズ3連動）
+     ホーム画面・設定画面への実データ反映
      ========================================================= */
   async function renderMainAppFromProfile() {
     if (!currentProfile) return;
@@ -273,12 +279,12 @@
     const { profile, plan, customReview } = currentProfile;
     const todayStr = RecordModule.getLocalDateStr(new Date());
 
-    const [todayMeals, allWeightLogs] = await Promise.all([
+    const [todayMeals, allWeightLogs, weightStats] = await Promise.all([
       DietDB.getByDate('meal_logs', todayStr),
-      DietDB.getAll('weight_logs')
+      DietDB.getAll('weight_logs'),
+      AnalyticsModule.getLatestWeightStats()
     ]);
 
-    // 今日の食事集計
     const mealSums = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
     const mealCounts = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
     let intakeKcal = 0, intakeP = 0, intakeF = 0, intakeC = 0;
@@ -313,7 +319,6 @@
     kcalBar.style.width = `${Math.min(100, Math.round((intakeKcal / Math.max(1, plan.targetCalories)) * 100))}%`;
     kcalBar.classList.toggle('over', isOver);
 
-    // PFCバー更新
     document.getElementById('home-p-text').textContent = `${intakeP.toFixed(1)} / ${plan.pfc.p} g`;
     document.getElementById('home-f-text').textContent = `${intakeF.toFixed(1)} / ${plan.pfc.f} g`;
     document.getElementById('home-c-text').textContent = `${intakeC.toFixed(1)} / ${plan.pfc.c} g`;
@@ -322,7 +327,6 @@
     document.getElementById('home-f-bar').style.width = `${Math.min(100, Math.round((intakeF / Math.max(1, plan.pfc.f)) * 100))}%`;
     document.getElementById('home-c-bar').style.width = `${Math.min(100, Math.round((intakeC / Math.max(1, plan.pfc.c)) * 100))}%`;
 
-    // 朝・昼・夕・間食チップ更新
     ['breakfast', 'lunch', 'dinner', 'snack'].forEach((type) => {
       const span = document.getElementById(`home-meal-${type}`);
       const chip = span ? span.closest('.meal-chip') : null;
@@ -336,7 +340,6 @@
       }
     });
 
-    // 最新の体重記録を取得（未記録ならプロフィール初期体重を使用）
     const weightOnly = allWeightLogs
       .filter((l) => l.type === 'weight')
       .sort((a, b) => String(b.measuredAt).localeCompare(String(a.measuredAt)));
@@ -344,9 +347,11 @@
     const latestW = weightOnly.length ? Number(weightOnly[0].value) : Number(profile.currentWeight);
     const weightDateLabel = document.getElementById('home-weight-date');
     if (weightDateLabel) {
-      weightDateLabel.textContent = weightOnly.length
-        ? `最終測定 ${weightOnly[0].date.slice(5).replace('-', '/')}`
-        : '初期登録時の体重';
+      if (weightStats.avg7 !== null) {
+        weightDateLabel.textContent = `${weightStats.hasMorning ? '朝7日平均' : '7日平均'} ${weightStats.avg7.toFixed(1)}kg`;
+      } else {
+        weightDateLabel.textContent = '初期登録時の体重';
+      }
     }
 
     const targetW = Number(profile.targetWeight);
@@ -1104,7 +1109,6 @@
     document.querySelectorAll('[data-nav]').forEach((el) => el.addEventListener('click', () => navigateTo(el.dataset.nav)));
     document.querySelectorAll('[data-toast]').forEach((el) => el.addEventListener('click', () => showToast(el.dataset.toast)));
 
-    // ホーム画面の朝・昼・夕・間食チップから記録画面へショートカット
     document.querySelectorAll('[data-quick-meal]').forEach((btn) => {
       btn.addEventListener('click', () => {
         RecordModule.setSelectedDate(RecordModule.getLocalDateStr(new Date()));
@@ -1132,10 +1136,14 @@
     updateNetworkStatus();
     updatePwaStatus();
 
+    AnalyticsModule.init();
     RecordModule.init({
       showToast,
       onDataChanged: async () => {
         await renderMainAppFromProfile();
+        if (currentViewKey === 'analytics') {
+          await AnalyticsModule.render(currentProfile);
+        }
       }
     });
 
