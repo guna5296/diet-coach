@@ -1,6 +1,6 @@
 /**
  * My Diet Coach - IndexedDB 管理モジュール
- * フェーズ2〜6までの全ストアをあらかじめ定義し、データ構造の一貫性を保つ
+ * DB_VERSION = 1 を維持し、フェーズ2で保存したデータを保持したままCRUD操作を提供
  */
 const DietDB = (() => {
   'use strict';
@@ -18,33 +18,26 @@ const DietDB = (() => {
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
 
-        // アプリ状態（プロフィール・初期登録下書き・設定）
         if (!db.objectStoreNames.contains('app_state')) {
           db.createObjectStore('app_state', { keyPath: 'key' });
         }
-        // 体重・体脂肪ログ（フェーズ3〜）
         if (!db.objectStoreNames.contains('weight_logs')) {
           const store = db.createObjectStore('weight_logs', { keyPath: 'id' });
           store.createIndex('by_date', 'date', { unique: false });
         }
-        // 食事ログ（フェーズ3〜）
         if (!db.objectStoreNames.contains('meal_logs')) {
           const store = db.createObjectStore('meal_logs', { keyPath: 'id' });
           store.createIndex('by_date', 'date', { unique: false });
         }
-        // 行動・体調ログ（フェーズ3〜）
         if (!db.objectStoreNames.contains('daily_logs')) {
           db.createObjectStore('daily_logs', { keyPath: 'date' });
         }
-        // ユーザー独自食材マスタ（フェーズ3〜）
         if (!db.objectStoreNames.contains('food_master')) {
           db.createObjectStore('food_master', { keyPath: 'id' });
         }
-        // 食事テンプレート・お気に入り（フェーズ3〜）
         if (!db.objectStoreNames.contains('meal_templates')) {
           db.createObjectStore('meal_templates', { keyPath: 'id' });
         }
-        // AI相談履歴・改善策（フェーズ5〜）
         if (!db.objectStoreNames.contains('ai_history')) {
           const store = db.createObjectStore('ai_history', { keyPath: 'id' });
           store.createIndex('by_createdAt', 'createdAt', { unique: false });
@@ -58,6 +51,11 @@ const DietDB = (() => {
     return dbPromise;
   }
 
+  function generateId(prefix = 'id') {
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  /* ---- app_state ---- */
   async function getState(key) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -92,10 +90,68 @@ const DietDB = (() => {
     });
   }
 
+  /* ---- 汎用ストア操作 ---- */
+  async function getItem(storeName, key) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
+      const req = tx.objectStore(storeName).get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function getAll(storeName) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
+      const req = tx.objectStore(storeName).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function getByDate(storeName, dateStr) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
+      const index = tx.objectStore(storeName).index('by_date');
+      const req = index.getAll(dateStr);
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function putItem(storeName, record) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      tx.objectStore(storeName).put(record);
+      tx.oncomplete = () => resolve(record);
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function deleteItem(storeName, key) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      tx.objectStore(storeName).delete(key);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
   return {
     openDB,
+    generateId,
     getState,
     setState,
-    deleteState
+    deleteState,
+    getItem,
+    getAll,
+    getByDate,
+    putItem,
+    deleteItem
   };
 })();
