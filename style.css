@@ -1544,3 +1544,8 @@ input, select, textarea {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+/* ボトムシート開閉時の下部ナビ誤タップ（タップ貫通）防止 */
+body.sheet-open .bottom-nav,
+body.nav-lock .bottom-nav {
+  pointer-events: none;
+}
