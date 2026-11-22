@@ -125,7 +125,7 @@
       },
       counseling: {},
       customReview: {
-        source: 'app', // 'app' | 'chatgpt' | 'manual'
+        source: 'app',
         typeTitle: '',
         personaText: '',
         coachingPolicy: '',
@@ -194,9 +194,7 @@
         await navigator.clipboard.writeText(text);
         return true;
       }
-    } catch (_) {
-      // フォールバックへ
-    }
+    } catch (_) {}
     try {
       const ta = document.createElement('textarea');
       ta.value = text;
@@ -233,6 +231,11 @@
       else btn.removeAttribute('aria-current');
     });
     headerTitle.textContent = VIEW_TITLES[targetKey];
+    if (targetKey === 'record') {
+      RecordModule.renderRecordView();
+    } else if (targetKey === 'home') {
+      renderMainAppFromProfile();
+    }
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
@@ -262,25 +265,90 @@
   }
 
   /* =========================================================
-     確定済みプロフィールのホーム・設定画面への反映
+     ホーム画面・設定画面への実データ反映（フェーズ3連動）
      ========================================================= */
-  function renderMainAppFromProfile() {
+  async function renderMainAppFromProfile() {
     if (!currentProfile) return;
 
     const { profile, plan, customReview } = currentProfile;
-    const intakeKcal = 0;
-    const remainKcal = Math.max(0, plan.targetCalories - intakeKcal);
+    const todayStr = RecordModule.getLocalDateStr(new Date());
+
+    const [todayMeals, allWeightLogs] = await Promise.all([
+      DietDB.getByDate('meal_logs', todayStr),
+      DietDB.getAll('weight_logs')
+    ]);
+
+    // 今日の食事集計
+    const mealSums = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
+    const mealCounts = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
+    let intakeKcal = 0, intakeP = 0, intakeF = 0, intakeC = 0;
+
+    todayMeals.forEach((m) => {
+      const k = Number(m.confirmed?.kcal) || 0;
+      intakeKcal += k;
+      intakeP += Number(m.confirmed?.p) || 0;
+      intakeF += Number(m.confirmed?.f) || 0;
+      intakeC += Number(m.confirmed?.c) || 0;
+      if (mealSums[m.mealType] !== undefined) {
+        mealSums[m.mealType] += k;
+        mealCounts[m.mealType] += 1;
+      }
+    });
+
+    intakeKcal = Math.round(intakeKcal);
+    const diffKcal = plan.targetCalories - intakeKcal;
+    const isOver = diffKcal < 0;
 
     document.getElementById('home-target-kcal').textContent = `目標 ${plan.targetCalories} kcal`;
-    document.getElementById('home-remain-kcal').innerHTML = `${remainKcal} <small>kcal</small>`;
+    document.getElementById('home-remain-label').textContent = isOver ? '目標を超過' : '残りの目安';
+    const remainEl = document.getElementById('home-remain-kcal');
+    remainEl.classList.toggle('over', isOver);
+    remainEl.innerHTML = isOver
+      ? `+${Math.abs(diffKcal)} <small>kcal</small>`
+      : `${diffKcal} <small>kcal</small>`;
+
     document.getElementById('home-intake-kcal').textContent = `摂取済み：${intakeKcal} kcal`;
-    document.getElementById('home-kcal-bar').style.width = '0%';
 
-    document.getElementById('home-p-text').textContent = `0 / ${plan.pfc.p} g`;
-    document.getElementById('home-f-text').textContent = `0 / ${plan.pfc.f} g`;
-    document.getElementById('home-c-text').textContent = `0 / ${plan.pfc.c} g`;
+    const kcalBar = document.getElementById('home-kcal-bar');
+    kcalBar.style.width = `${Math.min(100, Math.round((intakeKcal / Math.max(1, plan.targetCalories)) * 100))}%`;
+    kcalBar.classList.toggle('over', isOver);
 
-    const latestW = Number(profile.currentWeight);
+    // PFCバー更新
+    document.getElementById('home-p-text').textContent = `${intakeP.toFixed(1)} / ${plan.pfc.p} g`;
+    document.getElementById('home-f-text').textContent = `${intakeF.toFixed(1)} / ${plan.pfc.f} g`;
+    document.getElementById('home-c-text').textContent = `${intakeC.toFixed(1)} / ${plan.pfc.c} g`;
+
+    document.getElementById('home-p-bar').style.width = `${Math.min(100, Math.round((intakeP / Math.max(1, plan.pfc.p)) * 100))}%`;
+    document.getElementById('home-f-bar').style.width = `${Math.min(100, Math.round((intakeF / Math.max(1, plan.pfc.f)) * 100))}%`;
+    document.getElementById('home-c-bar').style.width = `${Math.min(100, Math.round((intakeC / Math.max(1, plan.pfc.c)) * 100))}%`;
+
+    // 朝・昼・夕・間食チップ更新
+    ['breakfast', 'lunch', 'dinner', 'snack'].forEach((type) => {
+      const span = document.getElementById(`home-meal-${type}`);
+      const chip = span ? span.closest('.meal-chip') : null;
+      if (!span || !chip) return;
+      if (mealCounts[type] > 0) {
+        span.textContent = `${Math.round(mealSums[type])} kcal`;
+        chip.classList.add('recorded');
+      } else {
+        span.textContent = '未記録';
+        chip.classList.remove('recorded');
+      }
+    });
+
+    // 最新の体重記録を取得（未記録ならプロフィール初期体重を使用）
+    const weightOnly = allWeightLogs
+      .filter((l) => l.type === 'weight')
+      .sort((a, b) => String(b.measuredAt).localeCompare(String(a.measuredAt)));
+
+    const latestW = weightOnly.length ? Number(weightOnly[0].value) : Number(profile.currentWeight);
+    const weightDateLabel = document.getElementById('home-weight-date');
+    if (weightDateLabel) {
+      weightDateLabel.textContent = weightOnly.length
+        ? `最終測定 ${weightOnly[0].date.slice(5).replace('-', '/')}`
+        : '初期登録時の体重';
+    }
+
     const targetW = Number(profile.targetWeight);
     const diffW = Number((latestW - targetW).toFixed(1));
 
@@ -312,7 +380,7 @@
     const summaryEl = document.getElementById('settings-profile-summary');
     summaryEl.innerHTML = `
       <div class="info-row"><span>診断タイプ</span><strong>${typeLabel}</strong></div>
-      <div class="info-row"><span>身長 / 現在体重 / 目標体重</span><strong>${profile.heightCm}cm / ${latestW.toFixed(1)}kg / ${targetW.toFixed(1)}kg</strong></div>
+      <div class="info-row"><span>身長 / 最新体重 / 目標体重</span><strong>${profile.heightCm}cm / ${latestW.toFixed(1)}kg / ${targetW.toFixed(1)}kg</strong></div>
       <div class="info-row"><span>推定基礎代謝 / 消費カロリー</span><strong>${plan.bmr} / ${plan.tdee} kcal</strong></div>
       <div class="info-row"><span>1日の目標カロリー</span><strong>${plan.targetCalories} kcal</strong></div>
       <div class="info-row"><span>目標PFCバランス</span><strong>P:${plan.pfc.p}g / F:${plan.pfc.f}g / C:${plan.pfc.c}g</strong></div>
@@ -430,7 +498,7 @@
       <article class="card">
         <div class="form-group">
           <label class="form-label" for="inp-birthdate">生年月日 <span class="badge-req">必須</span></label>
-          <input type="date" id="inp-birthdate" class="form-input" value="${escapeHtml(p.birthDate)}" max="${new Date().toISOString().split('T')[0]}">
+          <input type="date" id="inp-birthdate" class="form-input" value="${escapeHtml(p.birthDate)}" max="${RecordModule.getLocalDateStr(new Date())}">
         </div>
 
         <div class="input-row">
@@ -656,7 +724,6 @@
         if (pos >= 0) arr.splice(pos, 1);
         else arr.push(val);
         btn.classList.toggle('selected', pos < 0);
-        // 回答変更時は自動分析を最新化できるようにフラグを戻す（ChatGPT取り込み済みを除く）
         if (draft.customReview.source === 'app') draft.customReview.editedByUser = false;
         saveDraftQuietly();
       });
@@ -696,19 +763,16 @@
     return out;
   }
 
-  // ChatGPT出力から【診断タイプ】を抜き出す補助関数
   function extractTypeTitle(text, fallback) {
     const m = String(text || '').match(/【診断タイプ】\s*([^\n]+)/);
     return m && m[1] ? m[1].trim() : fallback;
   }
 
-  // Step 16: 分析結果とダイエット計画の確認・承認（案2：アプリ内分析標準＋ChatGPT深掘り併設）
   function renderReviewStep() {
     const plan = NutritionEngine.buildPlan(draft);
     const flatCounseling = flattenCounselingForSummary();
     const autoAnalysis = NutritionEngine.buildPersonalizedAnalysis(draft, plan, flatCounseling);
 
-    // 初回表示または未編集時は最新のアプリ内自動分析をセット
     if (!draft.customReview.editedByUser || !draft.customReview.personaText) {
       draft.customReview = {
         source: 'app',
@@ -730,7 +794,6 @@
         ? '安全優先のため減量期間は自動設定しません'
         : '維持・生活リズム改善ペース';
 
-    // 分析カードの中身（アプリ自動分析時は構造化カード、ChatGPT取り込み／手動編集時は整形テキスト表示）
     const analysisBodyHtml = !isCustomOrGpt
       ? `
         <div class="analysis-type-wrap">
@@ -777,7 +840,6 @@
 
       ${warningsHtml}
 
-      <!-- アプリ内パーソナライズ分析カード -->
       <article class="card analysis-card">
         ${analysisBodyHtml}
 
@@ -799,7 +861,6 @@
         </div>
       </article>
 
-      <!-- 数値計画カード -->
       <article class="card">
         <div class="card-header">
           <h3 class="card-title">1日の栄養目標（初期推定値）</h3>
@@ -831,7 +892,6 @@
         <p class="form-hint">達成ペースの目安：${escapeHtml(periodText)}</p>
       </article>
 
-      <!-- 案2：ChatGPT精密分析オプション（任意） -->
       <article class="card deep-ai-card">
         <div class="card-header">
           <h3 class="card-title">ChatGPTでさらに詳しく分析する</h3>
@@ -855,13 +915,11 @@
       </article>
     `;
 
-    // 微調整パネルの開閉
     const manualPanel = document.getElementById('manual-edit-panel');
     document.getElementById('btn-toggle-manual-edit').addEventListener('click', () => {
       manualPanel.classList.toggle('hidden');
     });
 
-    // 手動微調整の反映
     document.getElementById('btn-apply-manual-edit').addEventListener('click', () => {
       const pText = document.getElementById('inp-persona').value.trim();
       const cPolicy = document.getElementById('inp-policy').value.trim();
@@ -881,7 +939,6 @@
       renderReviewStep();
     });
 
-    // アプリ自動分析へリセット
     const resetBtn = document.getElementById('btn-reset-auto-analysis');
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
@@ -898,18 +955,12 @@
       });
     }
 
-    // ChatGPT精密分析プロンプトのコピー
     document.getElementById('btn-copy-deep-prompt').addEventListener('click', async () => {
       const promptText = NutritionEngine.buildDeepAnalysisPrompt(draft, plan, flatCounseling);
       const ok = await copyToClipboard(promptText);
-      if (ok) {
-        showToast('コピーしました！ChatGPTにそのまま貼り付けてください');
-      } else {
-        showToast('コピーに失敗しました。ブラウザの権限を確認してください');
-      }
+      showToast(ok ? 'コピーしました！ChatGPTにそのまま貼り付けてください' : 'コピーに失敗しました');
     });
 
-    // ChatGPT分析結果の取り込み
     document.getElementById('btn-apply-gpt-analysis').addEventListener('click', () => {
       const pasted = document.getElementById('inp-gpt-paste').value.trim();
       if (!pasted) {
@@ -973,7 +1024,6 @@
         targetPeriod
       };
 
-      // 生年月日や血液型を変えた場合、ChatGPT取り込み済みでなければ自動分析を再計算させる
       if (draft.customReview.source === 'app') {
         draft.customReview.editedByUser = false;
       }
@@ -1054,8 +1104,18 @@
     document.querySelectorAll('[data-nav]').forEach((el) => el.addEventListener('click', () => navigateTo(el.dataset.nav)));
     document.querySelectorAll('[data-toast]').forEach((el) => el.addEventListener('click', () => showToast(el.dataset.toast)));
 
+    // ホーム画面の朝・昼・夕・間食チップから記録画面へショートカット
+    document.querySelectorAll('[data-quick-meal]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        RecordModule.setSelectedDate(RecordModule.getLocalDateStr(new Date()));
+        RecordModule.setActiveMealCategory(btn.dataset.quickMeal);
+        navigateTo('record');
+      });
+    });
+
     document.getElementById('btn-open-onboarding').addEventListener('click', () => openOnboarding(true, 1));
     document.getElementById('btn-edit-plan').addEventListener('click', () => openOnboarding(true, REVIEW_STEP_INDEX));
+    document.getElementById('btn-open-master-manager').addEventListener('click', () => RecordModule.openMasterManagerModal());
 
     window.addEventListener('online', () => {
       updateNetworkStatus();
@@ -1071,6 +1131,14 @@
     renderTodayDate();
     updateNetworkStatus();
     updatePwaStatus();
+
+    RecordModule.init({
+      showToast,
+      onDataChanged: async () => {
+        await renderMainAppFromProfile();
+      }
+    });
+
     initEvents();
     registerServiceWorker();
 
