@@ -1,10 +1,5 @@
 /**
- * My Diet Coach - フェーズ3：記録機能モジュール（v1.3.1 修正版）
- * - 朝晩の体重・体脂肪（別レコード管理・日時修正・編集削除）
- * - 食事登録（B:食材グラム / C:栄養成分表示 / D:履歴・テンプレート）
- * - 行動・体調メモ（任意）
- * - 独自食材・テンプレート管理
- * - iPhoneでのタップ貫通防止＆保存後に記録画面トップ位置へ戻る制御
+ * My Diet Coach - フェーズ3〜5：記録機能モジュール
  */
 const RecordModule = (() => {
   'use strict';
@@ -31,8 +26,8 @@ const RecordModule = (() => {
   let selectedDate = getLocalDateStr(new Date());
   let activeMealCategory = 'breakfast';
   let navLockTimer = null;
+  let sheetOnClose = null;
 
-  // モーダル参照
   const sheetBackdrop = document.getElementById('sheet-backdrop');
   const sheetTitle = document.getElementById('sheet-title');
   const sheetBody = document.getElementById('sheet-body');
@@ -90,11 +85,15 @@ const RecordModule = (() => {
       .replace(/'/g, '&#039;');
   }
 
-  function openSheet(title, htmlContent) {
+  function openSheet(title, htmlContent, onClose = null) {
     if (navLockTimer) {
       clearTimeout(navLockTimer);
       navLockTimer = null;
     }
+    if (typeof sheetOnClose === 'function') {
+      try { sheetOnClose(); } catch (_) {}
+    }
+    sheetOnClose = onClose;
     sheetTitle.textContent = title;
     sheetBody.innerHTML = htmlContent;
     sheetBackdrop.classList.remove('hidden');
@@ -106,6 +105,10 @@ const RecordModule = (() => {
   function closeSheet() {
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
+    }
+    if (typeof sheetOnClose === 'function') {
+      try { sheetOnClose(); } catch (_) {}
+      sheetOnClose = null;
     }
     sheetBackdrop.classList.add('hidden');
     sheetBody.innerHTML = '';
@@ -135,9 +138,6 @@ const RecordModule = (() => {
     if (MEAL_LABEL_MAP[cat]) activeMealCategory = cat;
   }
 
-  /* =========================================================
-     記録画面メインの描画
-     ========================================================= */
   async function renderRecordView() {
     const dateLabel = document.getElementById('record-date-label');
     if (dateLabel) dateLabel.textContent = formatDisplayDate(selectedDate);
@@ -384,13 +384,13 @@ const RecordModule = (() => {
         ? items.map((m) => `
             <div class="meal-log-card">
               <div class="meal-log-top">
-                <strong>${escapeHtml(m.name)}</strong>
+                <strong>${escapeHtml(m.name)} ${m.source === 'ai_photo' ? '<span class="mini-tag">AI解析</span>' : ''}</strong>
                 <span class="meal-log-kcal">${Math.round(m.confirmed.kcal)} kcal</span>
               </div>
               <div class="meal-log-pfc">
                 P ${Number(m.confirmed.p).toFixed(1)}g ／ F ${Number(m.confirmed.f).toFixed(1)}g ／ C ${Number(m.confirmed.c).toFixed(1)}g
               </div>
-              ${m.items && m.items.length ? `<div class="meal-log-ingredients">${m.items.map((i) => `${escapeHtml(i.name)} ${i.grams}g`).join('・')}</div>` : ''}
+              ${m.items && m.items.length ? `<div class="meal-log-ingredients">${m.items.map((i) => `${escapeHtml(i.name)}${i.grams ? ` ${i.grams}g` : ''}`).join('・')}</div>` : ''}
               <div class="meal-log-actions">
                 <button type="button" class="icon-text-btn" data-save-tpl="${m.id}">定番化</button>
                 <button type="button" class="icon-text-btn" data-edit-meal="${m.id}">編集</button>
@@ -934,7 +934,12 @@ const RecordModule = (() => {
 
   /* ---- 登録済み食事の編集モーダル ---- */
   function openMealEditModal(meal) {
+    const aiRefHtml = meal.aiEstimate
+      ? `<div class="ai-meta-box" style="margin-bottom:12px;"><strong>AI初期推定値（保存済み）：</strong>${meal.aiEstimate.kcal}kcal（P:${meal.aiEstimate.p}g / F:${meal.aiEstimate.f}g / C:${meal.aiEstimate.c}g）</div>`
+      : '';
+
     openSheet('食事記録を編集', `
+      ${aiRefHtml}
       <div class="input-row">
         <div class="form-group">
           <label class="form-label" for="me-date">日付</label>
@@ -1307,7 +1312,6 @@ const RecordModule = (() => {
     });
   }
 
-  /* ---- 初期化 ---- */
   function init(opts) {
     callbacks = { ...callbacks, ...opts };
 
@@ -1331,6 +1335,15 @@ const RecordModule = (() => {
     document.getElementById('btn-rec-morning').addEventListener('click', () => openWeightCreateModal('morning'));
     document.getElementById('btn-rec-night').addEventListener('click', () => openWeightCreateModal('night'));
 
+    const photoBtn = document.getElementById('btn-meal-photo');
+    if (photoBtn) {
+      photoBtn.addEventListener('click', () => {
+        if (typeof CoachModule !== 'undefined') {
+          CoachModule.openPhotoAnalysisModal(selectedDate, activeMealCategory);
+        }
+      });
+    }
+
     document.getElementById('btn-meal-ingredients').addEventListener('click', openIngredientMealModal);
     document.getElementById('btn-meal-label').addEventListener('click', openLabelMealModal);
     document.getElementById('btn-meal-history').addEventListener('click', openHistoryTemplateModal);
@@ -1339,6 +1352,9 @@ const RecordModule = (() => {
 
   return {
     init,
+    openSheet,
+    closeSheet,
+    scrollToRecordTop,
     getLocalDateStr,
     setSelectedDate,
     setActiveMealCategory,
