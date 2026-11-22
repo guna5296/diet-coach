@@ -152,7 +152,6 @@
   const REVIEW_STEP_INDEX = BASE_STEPS_BEFORE_COUNSELING + COUNSELING_QUESTIONS.length;
   const TOTAL_STEPS = REVIEW_STEP_INDEX + 1;
 
-  // DOM参照
   const onboardingScreen = document.getElementById('onboarding-screen');
   const obStepLabel = document.getElementById('ob-step-label');
   const obProgressBar = document.getElementById('ob-progress-bar');
@@ -240,6 +239,8 @@
       renderMainAppFromProfile();
     } else if (targetKey === 'analytics') {
       AnalyticsModule.render(currentProfile);
+    } else if (targetKey === 'coach') {
+      CoachModule.render(currentProfile);
     }
 
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -258,6 +259,9 @@
     networkBadge.textContent = isOnline ? 'オンライン' : 'オフライン';
     networkBadge.classList.toggle('online', isOnline);
     networkBadge.classList.toggle('offline', !isOnline);
+
+    const coachOffline = document.getElementById('coach-offline-banner');
+    if (coachOffline) coachOffline.classList.toggle('hidden', isOnline);
   }
 
   function updatePwaStatus() {
@@ -424,6 +428,7 @@
     onboardingScreen.classList.add('hidden');
     appShell.classList.remove('hidden');
     renderMainAppFromProfile();
+    CoachModule.render(currentProfile);
   }
 
   function renderOnboardingStep() {
@@ -1141,6 +1146,17 @@
       showToast,
       onDataChanged: async () => {
         await renderMainAppFromProfile();
+        if (currentViewKey === 'analytics') {
+          await AnalyticsModule.render(currentProfile);
+        }
+      }
+    });
+    CoachModule.init({
+      showToast,
+      onMealSaved: async () => {
+        await renderMainAppFromProfile();
+        await RecordModule.renderRecordView();
+        RecordModule.scrollToRecordTop();
         if (currentViewKey === 'analytics') {
           await AnalyticsModule.render(currentProfile);
         }
