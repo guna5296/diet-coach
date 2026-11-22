@@ -1,9 +1,11 @@
-const CACHE_NAME = 'my-diet-coach-v1.0.0';
+const CACHE_NAME = 'my-diet-coach-v1.1.0';
 const CORE_ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './db.js',
+  './nutrition.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -29,7 +31,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 開発・運用両対応：オンライン時は最新を優先し、オフライン時はキャッシュを返す
+// オンライン時は最新を優先し、オフライン時はキャッシュを返す
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
