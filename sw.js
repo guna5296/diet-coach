@@ -1,16 +1,16 @@
-const CACHE_NAME = 'my-diet-coach-v1.6.1';
+const CACHE_NAME = 'my-diet-coach-v1.6.2';
 const CORE_ASSETS = [
   './',
   './index.html',
-  './style.css?v=1.6.1',
-  './app.js?v=1.6.1',
-  './db.js?v=1.6.1',
-  './foods.js?v=1.6.1',
-  './nutrition.js?v=1.6.1',
-  './record.js?v=1.6.1',
-  './analytics.js?v=1.6.1',
-  './coach.js?v=1.6.1',
-  './backup.js?v=1.6.1',
+  './style.css?v=1.6.2',
+  './app.js?v=1.6.2',
+  './db.js?v=1.6.2',
+  './foods.js?v=1.6.2',
+  './nutrition.js?v=1.6.2',
+  './record.js?v=1.6.2',
+  './analytics.js?v=1.6.2',
+  './coach.js?v=1.6.2',
+  './backup.js?v=1.6.2',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
