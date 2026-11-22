@@ -1,9 +1,10 @@
 /**
- * My Diet Coach - フェーズ3：記録機能モジュール
+ * My Diet Coach - フェーズ3：記録機能モジュール（v1.3.1 修正版）
  * - 朝晩の体重・体脂肪（別レコード管理・日時修正・編集削除）
  * - 食事登録（B:食材グラム / C:栄養成分表示 / D:履歴・テンプレート）
  * - 行動・体調メモ（任意）
  * - 独自食材・テンプレート管理
+ * - iPhoneでのタップ貫通防止＆保存後に記録画面トップ位置へ戻る制御
  */
 const RecordModule = (() => {
   'use strict';
@@ -29,6 +30,7 @@ const RecordModule = (() => {
 
   let selectedDate = getLocalDateStr(new Date());
   let activeMealCategory = 'breakfast';
+  let navLockTimer = null;
 
   // モーダル参照
   const sheetBackdrop = document.getElementById('sheet-backdrop');
@@ -36,7 +38,6 @@ const RecordModule = (() => {
   const sheetBody = document.getElementById('sheet-body');
   const sheetCloseBtn = document.getElementById('sheet-close');
 
-  // 日本時間でのローカル日付文字列（YYYY-MM-DD）
   function getLocalDateStr(dateObj = new Date()) {
     const y = dateObj.getFullYear();
     const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -90,16 +91,39 @@ const RecordModule = (() => {
   }
 
   function openSheet(title, htmlContent) {
+    if (navLockTimer) {
+      clearTimeout(navLockTimer);
+      navLockTimer = null;
+    }
     sheetTitle.textContent = title;
     sheetBody.innerHTML = htmlContent;
     sheetBackdrop.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    document.body.classList.add('sheet-open');
+    document.body.classList.remove('nav-lock');
   }
 
   function closeSheet() {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
     sheetBackdrop.classList.add('hidden');
     sheetBody.innerHTML = '';
     document.body.style.overflow = '';
+    document.body.classList.remove('sheet-open');
+    document.body.classList.add('nav-lock');
+
+    if (navLockTimer) clearTimeout(navLockTimer);
+    navLockTimer = setTimeout(() => {
+      document.body.classList.remove('nav-lock');
+      navLockTimer = null;
+    }, 350);
+  }
+
+  function scrollToRecordTop() {
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 80);
   }
 
   function setSelectedDate(dateStr) {
@@ -129,7 +153,7 @@ const RecordModule = (() => {
     renderDailySection(daily);
   }
 
-  /* ---- 1. 体重・体脂肪セクション（別管理表示） ---- */
+  /* ---- 1. 体重・体脂肪セクション ---- */
   function renderWeightSection(logs) {
     const sorted = [...logs].sort((a, b) => String(a.measuredAt).localeCompare(String(b.measuredAt)));
 
@@ -197,7 +221,6 @@ const RecordModule = (() => {
     });
   }
 
-  // 新規入力モーダル（朝 or 夜：体重と体脂肪を同時入力しても裏では別レコード保存）
   function openWeightCreateModal(timing) {
     const title = timing === 'morning' ? '朝の測定を記録' : '夜の測定を記録';
     const defaultDt = getLocalDateTimeStr(selectedDate, timing === 'morning' ? 7 : 21);
@@ -223,7 +246,10 @@ const RecordModule = (() => {
       </div>
     `);
 
-    document.getElementById('btn-save-weight').addEventListener('click', async () => {
+    document.getElementById('btn-save-weight').addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
       const dtVal = document.getElementById('w-datetime').value;
       const wVal = document.getElementById('w-weight').value.trim();
       const fVal = document.getElementById('w-fat').value.trim();
@@ -275,11 +301,11 @@ const RecordModule = (() => {
       closeSheet();
       callbacks.showToast('測定記録を保存しました');
       await renderRecordView();
+      scrollToRecordTop();
       await callbacks.onDataChanged();
     });
   }
 
-  // 単一レコード編集モーダル（体重と体脂肪を独立編集）
   function openWeightEditModal(log) {
     const isWeight = log.type === 'weight';
     openSheet(isWeight ? '体重の記録を編集' : '体脂肪率の記録を編集', `
@@ -303,7 +329,10 @@ const RecordModule = (() => {
       </div>
     `);
 
-    document.getElementById('btn-update-weight').addEventListener('click', async () => {
+    document.getElementById('btn-update-weight').addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
       const timing = document.getElementById('we-timing').value;
       const measuredAt = document.getElementById('we-datetime').value || log.measuredAt;
       const val = Number(document.getElementById('we-value').value);
@@ -322,6 +351,7 @@ const RecordModule = (() => {
       closeSheet();
       callbacks.showToast('測定記録を更新しました');
       await renderRecordView();
+      scrollToRecordTop();
       await callbacks.onDataChanged();
     });
   }
@@ -421,7 +451,6 @@ const RecordModule = (() => {
     });
   }
 
-  // 全食材リスト取得（標準＋独自登録）
   async function getAllFoods() {
     const customFoods = await DietDB.getAll('food_master');
     return [
@@ -430,10 +459,10 @@ const RecordModule = (() => {
     ];
   }
 
-  /* ---- 食事登録 B：食材・グラム登録（複数食材組み合わせ・オフライン計算） ---- */
+  /* ---- 食事登録 B：食材・グラム登録 ---- */
   async function openIngredientMealModal() {
     const allFoods = await getAllFoods();
-    let selectedItems = []; // { food, grams }
+    let selectedItems = [];
     let searchQuery = '';
     let selectedCat = 'all';
 
@@ -451,10 +480,8 @@ const RecordModule = (() => {
         </div>
       </div>
 
-      <!-- 追加済み食材とリアルタイム合計 -->
       <div class="selected-tray" id="ing-selected-tray"></div>
 
-      <!-- 食材検索 -->
       <div class="form-group" style="margin-top: 12px;">
         <div class="inline-head">
           <label class="form-label" for="ing-search" style="margin:0;">食材を検索して追加</label>
@@ -596,7 +623,10 @@ const RecordModule = (() => {
       openCustomFoodFormModal(() => openIngredientMealModal());
     });
 
-    document.getElementById('btn-save-ing-meal').addEventListener('click', async () => {
+    document.getElementById('btn-save-ing-meal').addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
       if (!selectedItems.length) {
         callbacks.showToast('食材を1つ以上追加してください');
         return;
@@ -649,6 +679,7 @@ const RecordModule = (() => {
       closeSheet();
       callbacks.showToast('食事を記録しました');
       await renderRecordView();
+      scrollToRecordTop();
       await callbacks.onDataChanged();
     });
 
@@ -724,7 +755,10 @@ const RecordModule = (() => {
       document.getElementById(id).addEventListener('input', updatePreview);
     });
 
-    document.getElementById('btn-save-lb-meal').addEventListener('click', async () => {
+    document.getElementById('btn-save-lb-meal').addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
       const name = document.getElementById('lb-name').value.trim();
       const rawKcal = document.getElementById('lb-kcal').value.trim();
       if (!name) {
@@ -765,6 +799,7 @@ const RecordModule = (() => {
       closeSheet();
       callbacks.showToast('食事を記録しました');
       await renderRecordView();
+      scrollToRecordTop();
       await callbacks.onDataChanged();
     });
   }
@@ -776,7 +811,6 @@ const RecordModule = (() => {
       DietDB.getAll('meal_logs')
     ]);
 
-    // 履歴は新しい順に重複料理名をある程度整理して直近30件表示
     const sortedMeals = [...allMeals].sort((a, b) => String(b.registeredAt).localeCompare(String(a.registeredAt)));
     const uniqueHistory = [];
     const seenKeys = new Set();
@@ -833,6 +867,7 @@ const RecordModule = (() => {
       closeSheet();
       callbacks.showToast(`「${item.name}」を${MEAL_LABEL_MAP[mealType]}に登録しました`);
       await renderRecordView();
+      scrollToRecordTop();
       await callbacks.onDataChanged();
     }
 
@@ -853,7 +888,9 @@ const RecordModule = (() => {
         `).join('');
 
         listEl.querySelectorAll('[data-use-tpl]').forEach((btn) => {
-          btn.addEventListener('click', () => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             const target = templates.find((x) => x.id === btn.dataset.useTpl);
             if (target) quickRegister(target, 'tpl');
           });
@@ -874,7 +911,9 @@ const RecordModule = (() => {
         `).join('');
 
         listEl.querySelectorAll('[data-use-hist]').forEach((btn) => {
-          btn.addEventListener('click', () => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             const target = uniqueHistory.find((x) => x.id === btn.dataset.useHist);
             if (target) quickRegister(target, 'hist');
           });
@@ -941,7 +980,10 @@ const RecordModule = (() => {
       </div>
     `);
 
-    document.getElementById('btn-update-meal').addEventListener('click', async () => {
+    document.getElementById('btn-update-meal').addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
       const name = document.getElementById('me-name').value.trim();
       if (!name) {
         callbacks.showToast('料理名を入力してください');
@@ -963,6 +1005,7 @@ const RecordModule = (() => {
       closeSheet();
       callbacks.showToast('食事記録を更新しました');
       await renderRecordView();
+      scrollToRecordTop();
       await callbacks.onDataChanged();
     });
   }
@@ -1080,7 +1123,10 @@ const RecordModule = (() => {
       });
     });
 
-    document.getElementById('btn-save-daily').addEventListener('click', async () => {
+    document.getElementById('btn-save-daily').addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
       state.date = selectedDate;
       state.exerciseMinutes = document.getElementById('dl-ex-min').value.trim();
       state.sleepHours = document.getElementById('dl-sleep-h').value.trim();
@@ -1092,15 +1138,20 @@ const RecordModule = (() => {
       closeSheet();
       callbacks.showToast('行動・体調メモを保存しました');
       await renderRecordView();
+      scrollToRecordTop();
       await callbacks.onDataChanged();
     });
 
-    document.getElementById('btn-del-daily').addEventListener('click', async () => {
+    document.getElementById('btn-del-daily').addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
       if (!confirm('この日の行動・体調メモを削除しますか？')) return;
       await DietDB.deleteItem('daily_logs', selectedDate);
       closeSheet();
       callbacks.showToast('行動・体調メモを削除しました');
       await renderRecordView();
+      scrollToRecordTop();
       await callbacks.onDataChanged();
     });
   }
@@ -1229,7 +1280,10 @@ const RecordModule = (() => {
       </div>
     `);
 
-    document.getElementById('btn-save-custom-food').addEventListener('click', async () => {
+    document.getElementById('btn-save-custom-food').addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
       const name = document.getElementById('cf-name').value.trim();
       const kcal = Number(document.getElementById('cf-kcal').value);
       if (!name || Number.isNaN(kcal) || kcal < 0) {
@@ -1257,9 +1311,17 @@ const RecordModule = (() => {
   function init(opts) {
     callbacks = { ...callbacks, ...opts };
 
-    sheetCloseBtn.addEventListener('click', closeSheet);
+    sheetCloseBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeSheet();
+    });
     sheetBackdrop.addEventListener('click', (e) => {
-      if (e.target === sheetBackdrop) closeSheet();
+      if (e.target === sheetBackdrop) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeSheet();
+      }
     });
 
     document.getElementById('rec-prev-day').addEventListener('click', () => setSelectedDate(shiftDate(selectedDate, -1)));
