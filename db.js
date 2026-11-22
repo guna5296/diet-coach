@@ -1,12 +1,22 @@
 /**
- * My Diet Coach - IndexedDB 管理モジュール
- * DB_VERSION = 1 を維持し、フェーズ2で保存したデータを保持したままCRUD操作を提供
+ * My Diet Coach - IndexedDB 管理モジュール（フェーズ6完成版）
+ * DB_VERSION = 1 を維持し、全ストアの一括出力・安全な一括復元に対応
  */
 const DietDB = (() => {
   'use strict';
 
   const DB_NAME = 'MyDietCoachDB';
   const DB_VERSION = 1;
+  const ALL_STORES = [
+    'app_state',
+    'weight_logs',
+    'meal_logs',
+    'daily_logs',
+    'food_master',
+    'meal_templates',
+    'ai_history'
+  ];
+
   let dbPromise = null;
 
   function openDB() {
@@ -142,7 +152,64 @@ const DietDB = (() => {
     });
   }
 
+  /* ---- フェーズ6：一括エクスポート・安全な一括復元・件数集計 ---- */
+  async function exportAllStores() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(ALL_STORES, 'readonly');
+      const data = {};
+      ALL_STORES.forEach((storeName) => {
+        const req = tx.objectStore(storeName).getAll();
+        req.onsuccess = () => {
+          data[storeName] = req.result || [];
+        };
+      });
+      tx.oncomplete = () => resolve(data);
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  /**
+   * 単一トランザクションで全ストアをクリアして上書き復元（途中失敗時は自動ロールバック）
+   */
+  async function replaceAllStores(storesData) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(ALL_STORES, 'readwrite');
+
+      ALL_STORES.forEach((storeName) => {
+        const store = tx.objectStore(storeName);
+        store.clear();
+        const records = Array.isArray(storesData[storeName]) ? storesData[storeName] : [];
+        records.forEach((rec) => {
+          if (rec && typeof rec === 'object') {
+            store.put(rec);
+          }
+        });
+      });
+
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error || new Error('復元トランザクションエラー'));
+      tx.onabort = () => reject(tx.error || new Error('復元が中断されました'));
+    });
+  }
+
+  async function getStorageCounts() {
+    const all = await exportAllStores();
+    const hasProfile = (all.app_state || []).some((s) => s.key === 'user_profile' && s.value);
+    return {
+      hasProfile,
+      weightLogs: (all.weight_logs || []).length,
+      mealLogs: (all.meal_logs || []).length,
+      dailyLogs: (all.daily_logs || []).length,
+      foodMaster: (all.food_master || []).length,
+      mealTemplates: (all.meal_templates || []).length,
+      aiHistory: (all.ai_history || []).length
+    };
+  }
+
   return {
+    ALL_STORES,
     openDB,
     generateId,
     getState,
@@ -152,6 +219,9 @@ const DietDB = (() => {
     getAll,
     getByDate,
     putItem,
-    deleteItem
+    deleteItem,
+    exportAllStores,
+    replaceAllStores,
+    getStorageCounts
   };
 })();
