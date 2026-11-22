@@ -56,7 +56,7 @@ button {
 
 input, select, textarea {
   font-family: inherit;
-  font-size: 16px; /* iPhone Safariでのフォーカス時自動ズームを防止 */
+  font-size: 16px;
   color: var(--text-main);
 }
 
@@ -404,6 +404,11 @@ input, select, textarea {
   padding: 4px 6px;
 }
 
+.text-btn.muted {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 .action-grid.two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -716,7 +721,7 @@ input, select, textarea {
 }
 
 .form-hint {
-  margin: 5px 0 0;
+  margin: 8px 0 0;
   font-size: 12px;
   color: var(--text-muted);
 }
@@ -727,7 +732,6 @@ input, select, textarea {
   gap: 10px;
 }
 
-/* 選択ボタン群（ラジオ・マルチ選択チップ） */
 .option-list {
   display: flex;
   flex-direction: column;
@@ -817,6 +821,164 @@ input, select, textarea {
   color: var(--text-muted);
   text-decoration: underline;
   padding: 6px 12px;
+}
+
+/* パーソナライズ診断カード */
+.analysis-card {
+  border-top: 4px solid var(--primary);
+}
+
+.analysis-type-wrap {
+  margin-bottom: 12px;
+}
+
+.analysis-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  background-color: var(--primary-soft);
+  color: var(--primary-dark);
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 6px;
+}
+
+.analysis-badge.gpt {
+  background-color: #E6EFF6;
+  color: #2B597A;
+}
+
+.analysis-type-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.4;
+}
+
+.analysis-paragraph {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.65;
+}
+
+.analysis-custom-text {
+  background-color: var(--bg-page);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-main);
+  margin-bottom: 14px;
+}
+
+.analysis-section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 10px;
+}
+
+.approach-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.approach-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background-color: var(--bg-page);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.approach-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background-color: var(--primary);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.approach-item strong {
+  display: block;
+  font-size: 14px;
+  color: var(--text-main);
+  margin-bottom: 3px;
+}
+
+.approach-item p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.55;
+}
+
+.coach-promise-box {
+  background-color: var(--primary-soft);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.promise-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 4px;
+}
+
+.coach-promise-box p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--primary-dark);
+  line-height: 1.6;
+}
+
+.analysis-footer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.manual-edit-panel {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+
+/* ChatGPT精密分析オプション */
+.deep-ai-card {
+  background-color: #FAFDFB;
+}
+
+.deep-ai-desc {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+.deep-ai-paste-area {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
 }
 
 /* 下部ナビゲーション */
