@@ -1,5 +1,5 @@
 /**
- * My Diet Coach - フェーズ6：バックアップ・復元・データ保護・ポリシーモジュール
+ * My Diet Coach - バックアップ・復元・初期化・ポリシーモジュール（v1.6.2）
  */
 const BackupModule = (() => {
   'use strict';
@@ -68,9 +68,6 @@ const BackupModule = (() => {
     }
   }
 
-  /**
-   * ブラウザへデータ永続化（自動消去されにくくする保護）を静かに要求
-   */
   async function requestPersistence() {
     if (!navigator.storage || typeof navigator.storage.persist !== 'function') {
       return { supported: false, persisted: false };
@@ -86,12 +83,8 @@ const BackupModule = (() => {
     }
   }
 
-  /**
-   * エクスポート用JSONオブジェクト作成（不要な一時データは除外）
-   */
   async function createBackupPayload() {
     const stores = await DietDB.exportAllStores();
-    // 途中下書き（onboarding_draft）など一時的なキーは除外してクリーンに保存
     const cleanedAppState = (stores.app_state || []).filter(
       (item) => item && item.key !== 'onboarding_draft'
     );
@@ -125,9 +118,6 @@ const BackupModule = (() => {
     };
   }
 
-  /**
-   * 復元用JSONの厳密なバリデーション
-   */
   function parseAndValidateBackup(rawText) {
     let parsed;
     try {
@@ -148,7 +138,6 @@ const BackupModule = (() => {
       return { ok: false, error: 'データ本体が見つかりません。' };
     }
 
-    // 各ストア配列の型と主キー存在チェック
     const keyByStore = {
       app_state: 'key',
       weight_logs: 'id',
@@ -194,9 +183,6 @@ const BackupModule = (() => {
     };
   }
 
-  /**
-   * 定期バックアップ促進バナー（ホーム画面）と設定画面ステータスの更新
-   */
   async function updateBackupIndicators() {
     const [lastBackupAt, snoozeUntil, counts] = await Promise.all([
       DietDB.getState('last_backup_at'),
@@ -204,7 +190,6 @@ const BackupModule = (() => {
       DietDB.getStorageCounts()
     ]);
 
-    // 設定画面の最終バックアップ・件数表示を更新
     const lastEl = document.getElementById('settings-last-backup');
     if (lastEl) lastEl.textContent = formatDateTimeJp(lastBackupAt);
 
@@ -213,7 +198,6 @@ const BackupModule = (() => {
       countEl.textContent = `体重・体脂肪 ${counts.weightLogs}件 / 食事 ${counts.mealLogs}件 / 体調 ${counts.dailyLogs}件`;
     }
 
-    // ホーム画面の控えめなリマインダー判定
     const bannerEl = document.getElementById('home-backup-banner');
     if (!bannerEl) return;
 
@@ -269,9 +253,6 @@ const BackupModule = (() => {
     });
   }
 
-  /**
-   * JSONバックアップ出力・復元ボトムシート
-   */
   async function openBackupModal() {
     const [counts, lastBackupAt] = await Promise.all([
       DietDB.getStorageCounts(),
@@ -285,7 +266,6 @@ const BackupModule = (() => {
         <strong>データ保護について：</strong>このアプリのデータはiPhone内のみに保存されます。OS更新や長期間の未使用・ブラウザ履歴消去などで消える可能性に備え、定期的なバックアップをおすすめします。
       </div>
 
-      <!-- 1. バックアップ出力 -->
       <div class="backup-section">
         <div class="backup-section-title">1. 全データをバックアップ出力</div>
         <p class="sheet-note" style="margin-bottom:8px;">
@@ -306,7 +286,6 @@ const BackupModule = (() => {
 
       <div class="divider-line"></div>
 
-      <!-- 2. バックアップから復元 -->
       <div class="backup-section">
         <div class="backup-section-title">2. バックアップから復元（上書き）</div>
         <p class="sheet-note">
@@ -328,7 +307,6 @@ const BackupModule = (() => {
           </div>
         </details>
 
-        <!-- 読み込み後の検証＆上書き確認パネル -->
         <div id="bk-restore-preview" class="restore-preview-box hidden"></div>
       </div>
     `);
@@ -340,7 +318,6 @@ const BackupModule = (() => {
       callbacks.showToast(msg);
     }
 
-    // JSONファイル保存・共有（iPhone共有シート優先 → 通常ダウンロード）
     document.getElementById('btn-bk-export-file').addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -351,7 +328,6 @@ const BackupModule = (() => {
         const filename = buildBackupFilename();
         const blob = new Blob([jsonStr], { type: 'application/json' });
 
-        // iPhone / iOS Safariで「“ファイル”に保存」等を直接出せるWeb Share APIを優先
         if (navigator.share && typeof File !== 'undefined') {
           const file = new File([blob], filename, { type: 'application/json' });
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -368,12 +344,10 @@ const BackupModule = (() => {
                 callbacks.showToast('共有をキャンセルしました');
                 return;
               }
-              // その他のエラー時は通常ダウンロードへフォールバック
             }
           }
         }
 
-        // フォールバック：通常のファイルダウンロード
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -389,7 +363,6 @@ const BackupModule = (() => {
       }
     });
 
-    // JSONテキストコピー
     document.getElementById('btn-bk-copy-json').addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -408,7 +381,6 @@ const BackupModule = (() => {
       }
     });
 
-    // 復元プレビュー表示と上書き確認
     function showRestoreConfirmation(rawText) {
       const previewEl = document.getElementById('bk-restore-preview');
       const result = parseAndValidateBackup(rawText);
@@ -479,7 +451,6 @@ const BackupModule = (() => {
 
         try {
           await DietDB.replaceAllStores(pendingRestore.data);
-          // 復元成功日時も記録（バックアップ元と同一のため最終バックアップ時刻も整合）
           await DietDB.setState('last_backup_at', pendingRestore.exportedAt || new Date().toISOString());
           RecordModule.closeSheet();
           callbacks.showToast('バックアップから全データを復元しました');
@@ -491,7 +462,6 @@ const BackupModule = (() => {
       });
     }
 
-    // ファイル選択読込
     const fileInput = document.getElementById('inp-bk-file');
     fileInput.addEventListener('change', () => {
       const file = fileInput.files && fileInput.files[0];
@@ -502,7 +472,6 @@ const BackupModule = (() => {
       reader.readAsText(file, 'utf-8');
     });
 
-    // テキスト貼付読込
     document.getElementById('btn-bk-load-paste').addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -516,8 +485,67 @@ const BackupModule = (() => {
   }
 
   /**
-   * 仕様書セクション3③・4⑤：AI連携・データ送信ポリシー確認モーダル
+   * 引き渡し前リセット・全データ完全削除モーダル（二重ロック）
    */
+  async function openResetModal() {
+    const counts = await DietDB.getStorageCounts();
+
+    RecordModule.openSheet('全データを初期化（削除）', `
+      <div class="alert-box warning">
+        <strong>注意：</strong>この操作を実行すると、このiPhone内に保存されている<strong>すべてのデータ（プロフィール・体重・食事・体調・独自食材・定番・AI履歴）が完全に削除</strong>され、最初の「ようこそ」画面に戻ります。
+      </div>
+
+      <div class="info-list" style="margin-bottom: 14px; background: var(--bg-page); padding: 12px; border-radius: 12px;">
+        <div class="info-row"><span>プロフィール・カウンセリング</span><strong>${counts.hasProfile ? '登録あり（削除）' : 'なし'}</strong></div>
+        <div class="info-row"><span>体重・体脂肪ログ</span><strong>${counts.weightLogs}件</strong></div>
+        <div class="info-row"><span>食事ログ</span><strong>${counts.mealLogs}件</strong></div>
+        <div class="info-row"><span>行動・体調メモ</span><strong>${counts.dailyLogs}件</strong></div>
+        <div class="info-row"><span>独自食材 / 食事テンプレート</span><strong>${counts.foodMaster} / ${counts.mealTemplates}件</strong></div>
+        <div class="info-row"><span>AI相談・改善策履歴</span><strong>${counts.aiHistory}件</strong></div>
+      </div>
+
+      <p class="sheet-note">
+        ※削除したデータは元に戻せません。必要なデータがある場合は、先に「JSONバックアップ出力」で保存してください。
+      </p>
+
+      <label class="checkbox-row" style="margin-bottom: 14px;">
+        <input type="checkbox" id="chk-confirm-reset">
+        <span>すべてのデータを削除して初期状態に戻すことを確認しました</span>
+      </label>
+
+      <button type="button" id="btn-exec-reset" class="btn-danger full-width" disabled>
+        全データを完全に削除して初期化する
+      </button>
+    `);
+
+    const chk = document.getElementById('chk-confirm-reset');
+    const execBtn = document.getElementById('btn-exec-reset');
+
+    chk.addEventListener('change', () => {
+      execBtn.disabled = !chk.checked;
+    });
+
+    execBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!chk.checked) return;
+
+      if (!confirm('本当にすべてのデータを削除しますか？この操作は元に戻せません。')) {
+        return;
+      }
+
+      try {
+        await DietDB.clearAllStores();
+        RecordModule.closeSheet();
+        callbacks.showToast('全データを削除し、初期状態に戻しました');
+        await callbacks.onDataRestored();
+      } catch (err) {
+        console.error('全データ初期化エラー:', err);
+        callbacks.showToast('初期化に失敗しました');
+      }
+    });
+  }
+
   function openPolicyModal() {
     RecordModule.openSheet('AI連携・プライバシーポリシー', `
       <div class="policy-block">
@@ -551,6 +579,7 @@ const BackupModule = (() => {
     requestPersistence,
     updateBackupIndicators,
     openBackupModal,
+    openResetModal,
     openPolicyModal
   };
 })();
