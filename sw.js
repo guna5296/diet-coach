@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-diet-coach-v1.1.0';
+const CACHE_NAME = 'my-diet-coach-v1.2.0';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -31,7 +31,6 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// オンライン時は最新を優先し、オフライン時はキャッシュを返す
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
