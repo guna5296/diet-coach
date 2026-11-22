@@ -1977,3 +1977,107 @@ body.nav-lock .bottom-nav {
   line-height: 1.6;
   margin-bottom: 10px;
 }
+/* ===========================
+   フェーズ6：バックアップ・復元・ポリシーUI
+   =========================== */
+.backup-banner {
+  background-color: #FFFFFF;
+  border: 1px solid var(--primary);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+
+.backup-banner-text {
+  font-size: 12.5px;
+  color: var(--text-main);
+  line-height: 1.55;
+  margin-bottom: 10px;
+}
+
+.backup-banner-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.backup-section {
+  margin-bottom: 8px;
+}
+
+.backup-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 8px;
+}
+
+.backup-btn-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.backup-file-label {
+  display: block;
+  cursor: pointer;
+}
+
+.restore-preview-box {
+  margin-top: 14px;
+  padding: 14px 12px;
+  background-color: #FAFDFB;
+  border: 2px solid var(--warn-border);
+  border-radius: var(--radius-md);
+}
+
+.restore-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.btn-danger {
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background-color: var(--danger-color);
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+}
+
+.btn-danger:disabled {
+  background-color: #D5C5C5;
+  color: #FFFFFF;
+  cursor: not-allowed;
+}
+
+.policy-block {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.policy-block:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.policy-block h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--primary-dark);
+}
+
+.policy-block p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.65;
+}
