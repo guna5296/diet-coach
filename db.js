@@ -1,6 +1,5 @@
 /**
- * My Diet Coach - IndexedDB 管理モジュール（フェーズ6完成版）
- * DB_VERSION = 1 を維持し、全ストアの一括出力・安全な一括復元に対応
+ * My Diet Coach - IndexedDB 管理モジュール（v1.6.2）
  */
 const DietDB = (() => {
   'use strict';
@@ -65,7 +64,6 @@ const DietDB = (() => {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   }
 
-  /* ---- app_state ---- */
   async function getState(key) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -100,7 +98,6 @@ const DietDB = (() => {
     });
   }
 
-  /* ---- 汎用ストア操作 ---- */
   async function getItem(storeName, key) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -152,7 +149,6 @@ const DietDB = (() => {
     });
   }
 
-  /* ---- フェーズ6：一括エクスポート・安全な一括復元・件数集計 ---- */
   async function exportAllStores() {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -169,9 +165,6 @@ const DietDB = (() => {
     });
   }
 
-  /**
-   * 単一トランザクションで全ストアをクリアして上書き復元（途中失敗時は自動ロールバック）
-   */
   async function replaceAllStores(storesData) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -192,6 +185,13 @@ const DietDB = (() => {
       tx.onerror = () => reject(tx.error || new Error('復元トランザクションエラー'));
       tx.onabort = () => reject(tx.error || new Error('復元が中断されました'));
     });
+  }
+
+  /**
+   * 全ストアのデータを完全に空にする（引き渡し前リセット・初期化用）
+   */
+  async function clearAllStores() {
+    return replaceAllStores({});
   }
 
   async function getStorageCounts() {
@@ -222,6 +222,7 @@ const DietDB = (() => {
     deleteItem,
     exportAllStores,
     replaceAllStores,
+    clearAllStores,
     getStorageCounts
   };
 })();
