@@ -1,16 +1,16 @@
-const CACHE_NAME = 'my-diet-coach-v1.6.0';
+const CACHE_NAME = 'my-diet-coach-v1.6.1';
 const CORE_ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './app.js',
-  './db.js',
-  './foods.js',
-  './nutrition.js',
-  './record.js',
-  './analytics.js',
-  './coach.js',
-  './backup.js',
+  './style.css?v=1.6.1',
+  './app.js?v=1.6.1',
+  './db.js?v=1.6.1',
+  './foods.js?v=1.6.1',
+  './nutrition.js?v=1.6.1',
+  './record.js?v=1.6.1',
+  './analytics.js?v=1.6.1',
+  './coach.js?v=1.6.1',
+  './backup.js?v=1.6.1',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -40,7 +40,7 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' })
       .then((response) => {
         if (response && response.status === 200 && response.type === 'basic') {
           const cloned = response.clone();
