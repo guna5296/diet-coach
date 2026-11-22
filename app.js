@@ -165,6 +165,7 @@
   const networkBadge = document.getElementById('network-badge');
   const todayDateEl = document.getElementById('today-date');
   const pwaStatusEl = document.getElementById('pwa-status');
+  const persistStatusEl = document.getElementById('settings-persist-status');
   const toastEl = document.getElementById('toast');
   const navItems = document.querySelectorAll('.nav-item');
   const views = document.querySelectorAll('.view');
@@ -241,6 +242,9 @@
       AnalyticsModule.render(currentProfile);
     } else if (targetKey === 'coach') {
       CoachModule.render(currentProfile);
+    } else if (targetKey === 'settings') {
+      renderMainAppFromProfile();
+      BackupModule.updateBackupIndicators();
     }
 
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -272,6 +276,18 @@
     pwaStatusEl.textContent = isStandalone
       ? 'ホーム画面アプリ（PWA）として起動中'
       : 'ブラウザ（Safari等）で表示中';
+  }
+
+  async function updatePersistenceStatus() {
+    if (!persistStatusEl) return;
+    const res = await BackupModule.requestPersistence();
+    if (!res.supported) {
+      persistStatusEl.textContent = '標準保存（定期バックアップ推奨）';
+    } else {
+      persistStatusEl.textContent = res.persisted
+        ? '永続化保護 有効（定期バックアップ推奨）'
+        : '標準保存（ホーム画面起動＋バックアップ推奨）';
+    }
   }
 
   /* =========================================================
@@ -395,6 +411,8 @@
       <div class="info-row"><span>目標PFCバランス</span><strong>P:${plan.pfc.p}g / F:${plan.pfc.f}g / C:${plan.pfc.c}g</strong></div>
       <div class="info-row"><span>最終承認日</span><strong>${new Date(currentProfile.approvedAt).toLocaleDateString('ja-JP')}</strong></div>
     `;
+
+    await BackupModule.updateBackupIndicators();
   }
 
   /* =========================================================
@@ -496,7 +514,16 @@
           </li>
         </ul>
       </article>
+
+      <div style="text-align:center; margin-top: 8px;">
+        <button type="button" id="btn-welcome-restore" class="text-btn">バックアップJSONから復元する方はこちら</button>
+      </div>
     `;
+
+    const restoreBtn = document.getElementById('btn-welcome-restore');
+    if (restoreBtn) {
+      restoreBtn.addEventListener('click', () => BackupModule.openBackupModal());
+    }
   }
 
   function renderProfileStep() {
@@ -1093,6 +1120,25 @@
     renderOnboardingStep();
   }
 
+  async function reloadAppStateFromDB() {
+    const savedProfile = await DietDB.getState('user_profile');
+    if (savedProfile) {
+      currentProfile = mergeWithDefaultDraft(savedProfile);
+      currentProfile.plan = savedProfile.plan;
+      currentProfile.approvedAt = savedProfile.approvedAt;
+      closeOnboardingToApp();
+      await RecordModule.renderRecordView();
+      await AnalyticsModule.render(currentProfile);
+      await CoachModule.render(currentProfile);
+      navigateTo('home');
+    } else {
+      currentProfile = null;
+      const savedDraft = await DietDB.getState('onboarding_draft');
+      draft = mergeWithDefaultDraft(savedDraft);
+      openOnboarding(false, draft.stepIndex || 0);
+    }
+  }
+
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
     if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
@@ -1125,6 +1171,8 @@
     document.getElementById('btn-open-onboarding').addEventListener('click', () => openOnboarding(true, 1));
     document.getElementById('btn-edit-plan').addEventListener('click', () => openOnboarding(true, REVIEW_STEP_INDEX));
     document.getElementById('btn-open-master-manager').addEventListener('click', () => RecordModule.openMasterManagerModal());
+    document.getElementById('btn-open-backup').addEventListener('click', () => BackupModule.openBackupModal());
+    document.getElementById('btn-open-policy').addEventListener('click', () => BackupModule.openPolicyModal());
 
     window.addEventListener('online', () => {
       updateNetworkStatus();
@@ -1162,22 +1210,19 @@
         }
       }
     });
+    BackupModule.init({
+      showToast,
+      onDataRestored: async () => {
+        await reloadAppStateFromDB();
+      }
+    });
 
     initEvents();
     registerServiceWorker();
+    updatePersistenceStatus();
 
     try {
-      const savedProfile = await DietDB.getState('user_profile');
-      if (savedProfile) {
-        currentProfile = mergeWithDefaultDraft(savedProfile);
-        currentProfile.plan = savedProfile.plan;
-        currentProfile.approvedAt = savedProfile.approvedAt;
-        closeOnboardingToApp();
-      } else {
-        const savedDraft = await DietDB.getState('onboarding_draft');
-        draft = mergeWithDefaultDraft(savedDraft);
-        openOnboarding(false, draft.stepIndex || 0);
-      }
+      await reloadAppStateFromDB();
     } catch (err) {
       console.error('起動時DB読み込みエラー:', err);
       openOnboarding(false, 0);
