@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#5B8A72">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="My Diet Coach">
+  <title>My Diet Coach</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- ヘッダー -->
+    <header class="app-header">
+      <div class="header-inner">
+        <h1 id="header-title" class="header-title">ホーム</h1>
+        <span id="network-badge" class="network-badge online" aria-live="polite">オンライン</span>
+      </div>
+    </header>
+
+    <!-- メインコンテンツ（5画面） -->
+    <main class="app-main">
+
+      <!-- ① ホーム画面 -->
+      <section id="view-home" class="view active" aria-labelledby="header-title">
+        <div class="date-bar">
+          <span id="today-date">--月--日（-）</span>
+          <span class="phase-tag">フェーズ1 土台確認中</span>
+        </div>
+
+        <!-- カロリーサマリー -->
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">今日のカロリー</h2>
+            <span class="card-sub">目標 -- kcal</span>
+          </div>
+          <div class="calorie-hero">
+            <div class="calorie-main">
+              <span class="calorie-label">残りの目安</span>
+              <strong class="calorie-value">--- <small>kcal</small></strong>
+            </div>
+            <div class="calorie-sub">
+              <span>摂取済み：0 kcal</span>
+            </div>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <div class="progress-fill" style="width: 0%;"></div>
+          </div>
+
+          <!-- PFCバー -->
+          <div class="pfc-grid">
+            <div class="pfc-item">
+              <div class="pfc-head"><span>たんぱく質 (P)</span><span>0 / -- g</span></div>
+              <div class="progress-track small"><div class="progress-fill p-color" style="width: 0%;"></div></div>
+            </div>
+            <div class="pfc-item">
+              <div class="pfc-head"><span>脂質 (F)</span><span>0 / -- g</span></div>
+              <div class="progress-track small"><div class="progress-fill f-color" style="width: 0%;"></div></div>
+            </div>
+            <div class="pfc-item">
+              <div class="pfc-head"><span>炭水化物 (C)</span><span>0 / -- g</span></div>
+              <div class="progress-track small"><div class="progress-fill c-color" style="width: 0%;"></div></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 体重・目標進捗 -->
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">体重の進捗</h2>
+            <span class="card-sub">7日平均を重視</span>
+          </div>
+          <div class="metric-row">
+            <div class="metric-box">
+              <span class="metric-label">最新の体重</span>
+              <strong class="metric-value">--.- <small>kg</small></strong>
+            </div>
+            <div class="metric-box">
+              <span class="metric-label">目標まで</span>
+              <strong class="metric-value accent">--.- <small>kg</small></strong>
+            </div>
+          </div>
+        </article>
+
+        <!-- 今日の食事記録状況 -->
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">今日の食事</h2>
+            <button type="button" class="text-btn" data-nav="record">記録する</button>
+          </div>
+          <div class="meal-status-grid">
+            <button type="button" class="meal-chip" data-nav="record">
+              <span class="meal-name">朝食</span>
+              <span class="meal-kcal">未記録</span>
+            </button>
+            <button type="button" class="meal-chip" data-nav="record">
+              <span class="meal-name">昼食</span>
+              <span class="meal-kcal">未記録</span>
+            </button>
+            <button type="button" class="meal-chip" data-nav="record">
+              <span class="meal-name">夕食</span>
+              <span class="meal-kcal">未記録</span>
+            </button>
+            <button type="button" class="meal-chip" data-nav="record">
+              <span class="meal-name">間食</span>
+              <span class="meal-kcal">未記録</span>
+            </button>
+          </div>
+        </article>
+
+        <!-- ショートカット -->
+        <div class="shortcut-row">
+          <button type="button" class="btn-primary" data-nav="record">体重・食事を記録する</button>
+        </div>
+      </section>
+
+      <!-- ② 記録画面 -->
+      <section id="view-record" class="view" aria-label="記録">
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">体重・体脂肪の記録</h2>
+            <span class="card-sub">朝・晩を別管理</span>
+          </div>
+          <div class="action-grid two-col">
+            <button type="button" class="action-tile" data-toast="フェーズ3で体重・体脂肪の入力を実装します">
+              <strong>朝の測定</strong>
+              <span>体重 / 体脂肪率</span>
+            </button>
+            <button type="button" class="action-tile" data-toast="フェーズ3で体重・体脂肪の入力を実装します">
+              <strong>夜の測定</strong>
+              <span>体重 / 体脂肪率</span>
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">食事の記録</h2>
+            <span class="card-sub">4つの登録方法</span>
+          </div>
+          <div class="action-list">
+            <button type="button" class="list-row-btn" data-toast="フェーズ5で写真解析のコピペ自動入力を実装します">
+              <div>
+                <strong>A. 写真から登録（AI解析）</strong>
+                <p>ChatGPTの解析結果を自動取り込み</p>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+            <button type="button" class="list-row-btn" data-toast="フェーズ3で食品マスタ・グラム計算を実装します">
+              <div>
+                <strong>B. 食材・グラムから登録</strong>
+                <p>オフライン対応・自動カロリー計算</p>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+            <button type="button" class="list-row-btn" data-toast="フェーズ3で栄養成分表示の手入力を実装します">
+              <div>
+                <strong>C. 栄養成分表示から登録</strong>
+                <p>市販食品のパッケージ数値を入力</p>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+            <button type="button" class="list-row-btn" data-toast="フェーズ3で履歴・お気に入り・テンプレートを実装します">
+              <div>
+                <strong>D. 履歴・お気に入り・テンプレート</strong>
+                <p>いつもの食事をワンタップで再登録</p>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">行動・体調メモ（任意）</h2>
+            <span class="card-sub">無理なく記録</span>
+          </div>
+          <button type="button" class="btn-secondary full-width" data-toast="フェーズ3で運動・睡眠・体調・空腹感の簡易入力を実装します">
+            運動・睡眠・体調を記録する
+          </button>
+        </article>
+      </section>
+
+      <!-- ③ 分析画面 -->
+      <section id="view-analytics" class="view" aria-label="分析">
+        <div class="segmented-control" role="tablist" aria-label="表示期間">
+          <button type="button" class="seg-btn active" data-toast="フェーズ4で日次・週次・月次の切り替えを実装します">7日</button>
+          <button type="button" class="seg-btn" data-toast="フェーズ4で日次・週次・月次の切り替えを実装します">30日</button>
+          <button type="button" class="seg-btn" data-toast="フェーズ4で日次・週次・月次の切り替えを実装します">全期間</button>
+        </div>
+
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">体重・7日平均の推移</h2>
+            <span class="card-sub">短期増減に惑わされない</span>
+          </div>
+          <div class="placeholder-box">
+            フェーズ4で折れ線グラフ（実測値＋7日平均）を表示します
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">カロリー・PFCバランス</h2>
+            <span class="card-sub">週間平均</span>
+          </div>
+          <div class="placeholder-box">
+            フェーズ4で摂取カロリー推移とPFC割合を表示します
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">継続率・行動傾向</h2>
+          </div>
+          <div class="placeholder-box">
+            フェーズ4で記録継続率・睡眠・体調との振り返りを表示します
+          </div>
+        </article>
+      </section>
+
+      <!-- ④ AIコーチ画面 -->
+      <section id="view-coach" class="view" aria-label="AIコーチ">
+        <article class="card notice-card">
+          <p class="notice-text">
+            相談したいときだけ利用できます。必要な記録データだけを自動でまとめて、ChatGPTへ渡すテキストを作成します。
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">ワンタップ相談メニュー</h2>
+            <span class="card-sub">ChatGPT連携</span>
+          </div>
+          <div class="action-grid two-col">
+            <button type="button" class="action-tile" data-toast="フェーズ5で相談用プロンプト自動生成を実装します">
+              <strong>今日の食事評価</strong>
+              <span>今日の記録を分析</span>
+            </button>
+            <button type="button" class="action-tile" data-toast="フェーズ5で相談用プロンプト自動生成を実装します">
+              <strong>停滞の原因分析</strong>
+              <span>直近2〜4週間の傾向</span>
+            </button>
+            <button type="button" class="action-tile" data-toast="フェーズ5で相談用プロンプト自動生成を実装します">
+              <strong>食べ過ぎリカバリー</strong>
+              <span>無理のない調整案</span>
+            </button>
+            <button type="button" class="action-tile" data-toast="フェーズ5で相談用プロンプト自動生成を実装します">
+              <strong>外食・明日の献立</strong>
+              <span>好みに合わせて提案</span>
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">自由に相談する・履歴</h2>
+          </div>
+          <button type="button" class="btn-secondary full-width" data-toast="フェーズ5で自由相談入力と過去の改善策履歴を実装します">
+            自由相談プロンプトを作成
+          </button>
+        </article>
+      </section>
+
+      <!-- ⑤ 設定・管理画面 -->
+      <section id="view-settings" class="view" aria-label="設定">
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">プロフィール・目標</h2>
+          </div>
+          <div class="action-list">
+            <button type="button" class="list-row-btn" data-toast="フェーズ2で初期登録・初回カウンセリングを実装します">
+              <div>
+                <strong>初回登録・カウンセリング</strong>
+                <p>基本情報・健康状態・減量計画の設定</p>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+            <button type="button" class="list-row-btn" data-toast="フェーズ3で食品マスタ・テンプレート管理を実装します">
+              <div>
+                <strong>食材マスタ・食事テンプレート管理</strong>
+                <p>よく食べる食材や定番メニューの編集</p>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">データ保護・バックアップ</h2>
+            <span class="card-sub">端末内保存</span>
+          </div>
+          <div class="action-list">
+            <button type="button" class="list-row-btn" data-toast="フェーズ6でJSON書き出し・復元を実装します">
+              <div>
+                <strong>JSONバックアップ出力 / 復元</strong>
+                <p>定期的な保存でデータ消失を防止</p>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">アプリ情報</h2>
+          </div>
+          <div class="info-list">
+            <div class="info-row">
+              <span>仕様バージョン</span>
+              <strong>v1.1 / Phase 1</strong>
+            </div>
+            <div class="info-row">
+              <span>データ保存先</span>
+              <strong>このiPhone内のみ</strong>
+            </div>
+            <div class="info-row">
+              <span>PWA動作状態</span>
+              <strong id="pwa-status">確認中...</strong>
+            </div>
+          </div>
+        </article>
+      </section>
+
+    </main>
+
+    <!-- 下部ナビゲーション（5画面） -->
+    <nav class="bottom-nav" aria-label="メインメニュー">
+      <button type="button" class="nav-item active" data-target="home" aria-current="page">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 10.5L12 3l9 7.5"></path>
+          <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"></path>
+        </svg>
+        <span>ホーム</span>
+      </button>
+
+      <button type="button" class="nav-item" data-target="record">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <line x1="12" y1="8" x2="12" y2="16"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        <span>記録</span>
+      </button>
+
+      <button type="button" class="nav-item" data-target="analytics">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="4" y1="20" x2="20" y2="20"></line>
+          <polyline points="5 15 10 10 14 13 19 6"></polyline>
+        </svg>
+        <span>分析</span>
+      </button>
+
+      <button type="button" class="nav-item" data-target="coach">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12a8 8 0 0 1-8 8H6l-3 2 1-4a8 8 0 1 1 17-6z"></path>
+        </svg>
+        <span>AIコーチ</span>
+      </button>
+
+      <button type="button" class="nav-item" data-target="settings">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>設定</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- 通知トースト -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
