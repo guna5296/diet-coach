@@ -1772,3 +1772,208 @@ body.nav-lock .bottom-nav {
 .weekly-table tr:last-child td {
   border-bottom: none;
 }
+/* ===========================
+   フェーズ5：AIコーチ・写真解析UI
+   =========================== */
+.action-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-plan-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background-color: var(--bg-page);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.action-plan-item input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+
+.action-plan-item strong {
+  display: block;
+  font-size: 13.5px;
+  color: var(--text-main);
+}
+
+.action-plan-item span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-card {
+  background-color: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.history-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.history-q {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.history-action-badge {
+  background-color: var(--primary-soft);
+  color: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.history-action-badge.done {
+  background-color: var(--bg-subtle);
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.history-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.readonly-box {
+  background-color: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-main);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.prompt-preview-details {
+  margin-top: 10px;
+  background-color: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.prompt-preview-details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.prompt-preview-pre {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 11.5px;
+  line-height: 1.5;
+  max-height: 180px;
+  overflow-y: auto;
+  color: var(--text-main);
+}
+
+.divider-line {
+  height: 1px;
+  background-color: var(--border);
+  margin: 16px 0;
+}
+
+/* 写真解析ステップUI */
+.photo-step-box {
+  background-color: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.photo-confirm-box {
+  background-color: #FAFDFB;
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-md);
+  padding: 14px 12px;
+  margin-top: 12px;
+}
+
+.photo-step-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 10px;
+}
+
+.photo-capture-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.photo-file-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12.5px;
+  padding: 11px 8px;
+}
+
+.photo-preview-wrap {
+  margin-top: 10px;
+  background-color: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+}
+
+.photo-preview-img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+.photo-preview-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-sub);
+}
+
+.ai-meta-box {
+  background-color: var(--primary-soft);
+  color: var(--primary-dark);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
