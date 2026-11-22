@@ -53,7 +53,6 @@
 
         <div id="home-safety-banner" class="alert-box warning hidden"></div>
 
-        <!-- カロリーサマリー -->
         <article class="card">
           <div class="card-header">
             <h2 class="card-title">今日のカロリー</h2>
@@ -88,7 +87,6 @@
           </div>
         </article>
 
-        <!-- 体重・目標進捗 -->
         <article class="card">
           <div class="card-header">
             <h2 class="card-title">体重の進捗</h2>
@@ -106,7 +104,6 @@
           </div>
         </article>
 
-        <!-- 今日の食事記録状況 -->
         <article class="card">
           <div class="card-header">
             <h2 class="card-title">今日の食事</h2>
@@ -168,13 +165,13 @@
         <article class="card">
           <div class="card-header">
             <h2 class="card-title">食事を追加する</h2>
-            <span class="card-sub">オフライン対応</span>
+            <span class="card-sub">4つの登録方法</span>
           </div>
           <div class="action-list">
-            <button type="button" class="list-row-btn" data-toast="フェーズ5で写真解析のコピペ自動入力を実装します">
+            <button type="button" id="btn-meal-photo" class="list-row-btn">
               <div>
                 <strong>A. 写真から登録（AI解析）</strong>
-                <p>ChatGPTの解析結果を自動取り込み（フェーズ5）</p>
+                <p>ChatGPTの解析結果を自動取り込み・写真は非保存</p>
               </div>
               <span class="chevron">›</span>
             </button>
@@ -219,7 +216,7 @@
         </article>
       </section>
 
-      <!-- ③ 分析画面（フェーズ4実装） -->
+      <!-- ③ 分析画面 -->
       <section id="view-analytics" class="view" aria-label="分析">
         <div class="segmented-control" role="tablist" aria-label="表示期間">
           <button type="button" class="seg-btn active" data-analytics-range="7">7日</button>
@@ -230,11 +227,15 @@
         <div id="analytics-content"></div>
       </section>
 
-      <!-- ④ AIコーチ画面 -->
+      <!-- ④ AIコーチ画面（フェーズ5実装） -->
       <section id="view-coach" class="view" aria-label="AIコーチ">
+        <div id="coach-offline-banner" class="alert-box warning hidden">
+          現在オフラインです。ChatGPTへの新規相談・写真解析はオンライン時にご利用ください（過去の相談履歴はオフラインでも閲覧できます）。
+        </div>
+
         <article class="card notice-card">
           <p class="notice-text">
-            相談したいときだけ利用できます。必要な記録データだけを自動でまとめて、ChatGPTへ渡すテキストを作成します。
+            相談したいときだけ利用できます。選んだテーマに必要な記録データだけを自動でまとめ、ChatGPTへ渡すプロンプトを作成します。
           </p>
         </article>
 
@@ -244,33 +245,35 @@
             <span class="card-sub">ChatGPT連携</span>
           </div>
           <div class="action-grid two-col">
-            <button type="button" class="action-tile" data-toast="フェーズ5で相談用プロンプト自動生成を実装します">
+            <button type="button" class="action-tile" data-consult-topic="today_meal">
               <strong>今日の食事評価</strong>
               <span>今日の記録を分析</span>
             </button>
-            <button type="button" class="action-tile" data-toast="フェーズ5で相談用プロンプト自動生成を実装します">
+            <button type="button" class="action-tile" data-consult-topic="plateau">
               <strong>停滞の原因分析</strong>
               <span>直近2〜4週間の傾向</span>
             </button>
-            <button type="button" class="action-tile" data-toast="フェーズ5で相談用プロンプト自動生成を実装します">
+            <button type="button" class="action-tile" data-consult-topic="overeat">
               <strong>食べ過ぎリカバリー</strong>
               <span>無理のない調整案</span>
             </button>
-            <button type="button" class="action-tile" data-toast="フェーズ5で相談用プロンプト自動生成を実装します">
+            <button type="button" class="action-tile" data-consult-topic="eating_out_menu">
               <strong>外食・明日の献立</strong>
               <span>好みに合わせて提案</span>
             </button>
           </div>
+          <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+            <button type="button" class="btn-outline full-width" data-consult-topic="plan_review">
+              目標カロリー・計画の見直しを相談
+            </button>
+            <button type="button" class="btn-secondary full-width" data-consult-topic="free">
+              自由に質問して相談プロンプトを作成
+            </button>
+          </div>
         </article>
 
-        <article class="card">
-          <div class="card-header">
-            <h2 class="card-title">自由に相談する・履歴</h2>
-          </div>
-          <button type="button" class="btn-secondary full-width" data-toast="フェーズ5で自由相談入力と過去の改善策履歴を実装します">
-            自由相談プロンプトを作成
-          </button>
-        </article>
+        <!-- 実践中の改善策・相談履歴（動的描画） -->
+        <div id="coach-dynamic-area"></div>
       </section>
 
       <!-- ⑤ 設定・管理画面 -->
@@ -328,7 +331,7 @@
           <div class="info-list">
             <div class="info-row">
               <span>仕様バージョン</span>
-              <strong id="settings-version">v1.1 / Phase 4</strong>
+              <strong id="settings-version">v1.1 / Phase 5</strong>
             </div>
             <div class="info-row">
               <span>データ保存先</span>
@@ -381,7 +384,7 @@
       <button type="button" class="nav-item" data-target="settings">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
         <span>設定</span>
       </button>
@@ -406,6 +409,7 @@
   <script src="./nutrition.js"></script>
   <script src="./record.js"></script>
   <script src="./analytics.js"></script>
+  <script src="./coach.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
