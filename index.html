@@ -52,6 +52,7 @@
         </div>
 
         <div id="home-safety-banner" class="alert-box warning hidden"></div>
+        <div id="home-backup-banner" class="backup-banner hidden"></div>
 
         <article class="card">
           <div class="card-header">
@@ -227,7 +228,7 @@
         <div id="analytics-content"></div>
       </section>
 
-      <!-- ④ AIコーチ画面（フェーズ5実装） -->
+      <!-- ④ AIコーチ画面 -->
       <section id="view-coach" class="view" aria-label="AIコーチ">
         <div id="coach-offline-banner" class="alert-box warning hidden">
           現在オフラインです。ChatGPTへの新規相談・写真解析はオンライン時にご利用ください（過去の相談履歴はオフラインでも閲覧できます）。
@@ -272,11 +273,10 @@
           </div>
         </article>
 
-        <!-- 実践中の改善策・相談履歴（動的描画） -->
         <div id="coach-dynamic-area"></div>
       </section>
 
-      <!-- ⑤ 設定・管理画面 -->
+      <!-- ⑤ 設定・管理画面（フェーズ6完成版） -->
       <section id="view-settings" class="view" aria-label="設定">
         <article class="card">
           <div class="card-header">
@@ -314,13 +314,34 @@
             <span class="card-sub">端末内保存</span>
           </div>
           <div class="action-list">
-            <button type="button" class="list-row-btn" data-toast="フェーズ6でJSON書き出し・復元を実装します">
+            <button type="button" id="btn-open-backup" class="list-row-btn">
               <div>
                 <strong>JSONバックアップ出力 / 復元</strong>
-                <p>定期的な保存でデータ消失を防止</p>
+                <p>全データの保存・復元（上書き確認つき）</p>
               </div>
               <span class="chevron">›</span>
             </button>
+            <button type="button" id="btn-open-policy" class="list-row-btn">
+              <div>
+                <strong>AI連携・データ送信ポリシー</strong>
+                <p>写真非保存・外部送信・免責事項の確認</p>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+          </div>
+          <div class="info-list" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+            <div class="info-row">
+              <span>最終バックアップ</span>
+              <strong id="settings-last-backup">確認中...</strong>
+            </div>
+            <div class="info-row">
+              <span>保存データ件数</span>
+              <strong id="settings-data-counts">確認中...</strong>
+            </div>
+            <div class="info-row">
+              <span>端末データ保護</span>
+              <strong id="settings-persist-status">確認中...</strong>
+            </div>
           </div>
         </article>
 
@@ -331,11 +352,15 @@
           <div class="info-list">
             <div class="info-row">
               <span>仕様バージョン</span>
-              <strong id="settings-version">v1.1 / Phase 5</strong>
+              <strong id="settings-version">v1.1 / Phase 6（完成版）</strong>
             </div>
             <div class="info-row">
               <span>データ保存先</span>
               <strong>このiPhone内のみ（IndexedDB）</strong>
+            </div>
+            <div class="info-row">
+              <span>AI連携方式</span>
+              <strong>ChatGPT手動連携（無料枠）</strong>
             </div>
             <div class="info-row">
               <span>PWA動作状態</span>
@@ -410,6 +435,7 @@
   <script src="./record.js"></script>
   <script src="./analytics.js"></script>
   <script src="./coach.js"></script>
+  <script src="./backup.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
