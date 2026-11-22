@@ -137,9 +137,8 @@
         </div>
       </section>
 
-      <!-- ② 記録画面（フェーズ3実装） -->
+      <!-- ② 記録画面 -->
       <section id="view-record" class="view" aria-label="記録">
-        <!-- 日付ナビゲーター -->
         <div class="date-nav-bar">
           <button type="button" id="rec-prev-day" class="date-nav-btn" aria-label="前日">‹ 前日</button>
           <button type="button" id="rec-today-btn" class="date-nav-center">
@@ -148,7 +147,6 @@
           <button type="button" id="rec-next-day" class="date-nav-btn" aria-label="翌日">翌日 ›</button>
         </div>
 
-        <!-- 体重・体脂肪 -->
         <article class="card">
           <div class="card-header">
             <h2 class="card-title">体重・体脂肪の記録</h2>
@@ -167,7 +165,6 @@
           <div id="rec-weight-list" class="log-list-wrap"></div>
         </article>
 
-        <!-- 食事の登録方法 -->
         <article class="card">
           <div class="card-header">
             <h2 class="card-title">食事を追加する</h2>
@@ -205,7 +202,6 @@
           </div>
         </article>
 
-        <!-- この日の食事一覧 -->
         <article class="card">
           <div class="card-header">
             <h2 class="card-title">この日の食事記録</h2>
@@ -214,7 +210,6 @@
           <div id="rec-meal-list-wrap"></div>
         </article>
 
-        <!-- 行動・体調メモ -->
         <article class="card">
           <div class="card-header">
             <h2 class="card-title">行動・体調メモ（任意）</h2>
@@ -224,42 +219,15 @@
         </article>
       </section>
 
-      <!-- ③ 分析画面 -->
+      <!-- ③ 分析画面（フェーズ4実装） -->
       <section id="view-analytics" class="view" aria-label="分析">
         <div class="segmented-control" role="tablist" aria-label="表示期間">
-          <button type="button" class="seg-btn active" data-toast="フェーズ4で日次・週次・月次の切り替えを実装します">7日</button>
-          <button type="button" class="seg-btn" data-toast="フェーズ4で日次・週次・月次の切り替えを実装します">30日</button>
-          <button type="button" class="seg-btn" data-toast="フェーズ4で日次・週次・月次の切り替えを実装します">全期間</button>
+          <button type="button" class="seg-btn active" data-analytics-range="7">7日</button>
+          <button type="button" class="seg-btn" data-analytics-range="30">30日</button>
+          <button type="button" class="seg-btn" data-analytics-range="all">全期間</button>
         </div>
 
-        <article class="card">
-          <div class="card-header">
-            <h2 class="card-title">体重・7日平均の推移</h2>
-            <span class="card-sub">短期増減に惑わされない</span>
-          </div>
-          <div class="placeholder-box">
-            フェーズ4で折れ線グラフ（実測値＋7日平均）を表示します
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="card-header">
-            <h2 class="card-title">カロリー・PFCバランス</h2>
-            <span class="card-sub">週間平均</span>
-          </div>
-          <div class="placeholder-box">
-            フェーズ4で摂取カロリー推移とPFC割合を表示します
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="card-header">
-            <h2 class="card-title">継続率・行動傾向</h2>
-          </div>
-          <div class="placeholder-box">
-            フェーズ4で記録継続率・睡眠・体調との振り返りを表示します
-          </div>
-        </article>
+        <div id="analytics-content"></div>
       </section>
 
       <!-- ④ AIコーチ画面 -->
@@ -360,7 +328,7 @@
           <div class="info-list">
             <div class="info-row">
               <span>仕様バージョン</span>
-              <strong id="settings-version">v1.1 / Phase 3</strong>
+              <strong id="settings-version">v1.1 / Phase 4</strong>
             </div>
             <div class="info-row">
               <span>データ保存先</span>
@@ -420,7 +388,7 @@
     </nav>
   </div>
 
-  <!-- 共通ボトムシート（フェーズ3 入力・編集モーダル） -->
+  <!-- 共通ボトムシート -->
   <div id="sheet-backdrop" class="sheet-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <div class="sheet-panel">
       <div class="sheet-header">
@@ -437,6 +405,7 @@
   <script src="./foods.js"></script>
   <script src="./nutrition.js"></script>
   <script src="./record.js"></script>
+  <script src="./analytics.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
