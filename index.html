@@ -13,7 +13,28 @@
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <div class="app-shell">
+  <!-- 初回登録・カウンセリング画面（未完了時はホーム画面に進ませない） -->
+  <div id="onboarding-screen" class="onboarding-screen hidden" aria-label="初期登録と初回カウンセリング">
+    <header class="ob-header">
+      <div class="ob-header-top">
+        <span id="ob-step-label" class="ob-step-label">初期設定</span>
+        <button type="button" id="ob-btn-cancel" class="text-btn hidden">閉じる</button>
+      </div>
+      <div class="progress-track small">
+        <div id="ob-progress-bar" class="progress-fill" style="width: 0%;"></div>
+      </div>
+    </header>
+
+    <main id="ob-content" class="ob-main"></main>
+
+    <footer class="ob-footer">
+      <button type="button" id="ob-btn-back" class="btn-outline hidden">戻る</button>
+      <button type="button" id="ob-btn-next" class="btn-primary">次へ</button>
+    </footer>
+  </div>
+
+  <!-- 通常アプリ画面（初期登録完了後に表示） -->
+  <div id="app-shell" class="app-shell hidden">
     <!-- ヘッダー -->
     <header class="app-header">
       <div class="header-inner">
@@ -29,41 +50,43 @@
       <section id="view-home" class="view active" aria-labelledby="header-title">
         <div class="date-bar">
           <span id="today-date">--月--日（-）</span>
-          <span class="phase-tag">フェーズ1 土台確認中</span>
+          <span id="home-phase-tag" class="phase-tag">初期目標（推定値）</span>
         </div>
+
+        <div id="home-safety-banner" class="alert-box warning hidden"></div>
 
         <!-- カロリーサマリー -->
         <article class="card">
           <div class="card-header">
             <h2 class="card-title">今日のカロリー</h2>
-            <span class="card-sub">目標 -- kcal</span>
+            <span id="home-target-kcal" class="card-sub">目標 -- kcal</span>
           </div>
           <div class="calorie-hero">
             <div class="calorie-main">
               <span class="calorie-label">残りの目安</span>
-              <strong class="calorie-value">--- <small>kcal</small></strong>
+              <strong id="home-remain-kcal" class="calorie-value">--- <small>kcal</small></strong>
             </div>
             <div class="calorie-sub">
-              <span>摂取済み：0 kcal</span>
+              <span id="home-intake-kcal">摂取済み：0 kcal</span>
             </div>
           </div>
           <div class="progress-track" aria-hidden="true">
-            <div class="progress-fill" style="width: 0%;"></div>
+            <div id="home-kcal-bar" class="progress-fill" style="width: 0%;"></div>
           </div>
 
           <!-- PFCバー -->
           <div class="pfc-grid">
             <div class="pfc-item">
-              <div class="pfc-head"><span>たんぱく質 (P)</span><span>0 / -- g</span></div>
-              <div class="progress-track small"><div class="progress-fill p-color" style="width: 0%;"></div></div>
+              <div class="pfc-head"><span>たんぱく質 (P)</span><span id="home-p-text">0 / -- g</span></div>
+              <div class="progress-track small"><div id="home-p-bar" class="progress-fill p-color" style="width: 0%;"></div></div>
             </div>
             <div class="pfc-item">
-              <div class="pfc-head"><span>脂質 (F)</span><span>0 / -- g</span></div>
-              <div class="progress-track small"><div class="progress-fill f-color" style="width: 0%;"></div></div>
+              <div class="pfc-head"><span>脂質 (F)</span><span id="home-f-text">0 / -- g</span></div>
+              <div class="progress-track small"><div id="home-f-bar" class="progress-fill f-color" style="width: 0%;"></div></div>
             </div>
             <div class="pfc-item">
-              <div class="pfc-head"><span>炭水化物 (C)</span><span>0 / -- g</span></div>
-              <div class="progress-track small"><div class="progress-fill c-color" style="width: 0%;"></div></div>
+              <div class="pfc-head"><span>炭水化物 (C)</span><span id="home-c-text">0 / -- g</span></div>
+              <div class="progress-track small"><div id="home-c-bar" class="progress-fill c-color" style="width: 0%;"></div></div>
             </div>
           </div>
         </article>
@@ -77,11 +100,11 @@
           <div class="metric-row">
             <div class="metric-box">
               <span class="metric-label">最新の体重</span>
-              <strong class="metric-value">--.- <small>kg</small></strong>
+              <strong id="home-latest-weight" class="metric-value">--.- <small>kg</small></strong>
             </div>
             <div class="metric-box">
               <span class="metric-label">目標まで</span>
-              <strong class="metric-value accent">--.- <small>kg</small></strong>
+              <strong id="home-diff-weight" class="metric-value accent">--.- <small>kg</small></strong>
             </div>
           </div>
         </article>
@@ -270,13 +293,21 @@
       <section id="view-settings" class="view" aria-label="設定">
         <article class="card">
           <div class="card-header">
-            <h2 class="card-title">プロフィール・目標</h2>
+            <h2 class="card-title">現在のダイエット計画</h2>
+            <button type="button" id="btn-edit-plan" class="text-btn">見直す</button>
+          </div>
+          <div id="settings-profile-summary" class="info-list"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">プロフィール・カウンセリング</h2>
           </div>
           <div class="action-list">
-            <button type="button" class="list-row-btn" data-toast="フェーズ2で初期登録・初回カウンセリングを実装します">
+            <button type="button" id="btn-open-onboarding" class="list-row-btn">
               <div>
-                <strong>初回登録・カウンセリング</strong>
-                <p>基本情報・健康状態・減量計画の設定</p>
+                <strong>初期登録・初回カウンセリングを編集</strong>
+                <p>基本情報・健康状態・人物像・目標の見直し</p>
               </div>
               <span class="chevron">›</span>
             </button>
@@ -313,11 +344,11 @@
           <div class="info-list">
             <div class="info-row">
               <span>仕様バージョン</span>
-              <strong>v1.1 / Phase 1</strong>
+              <strong id="settings-version">v1.1 / Phase 2</strong>
             </div>
             <div class="info-row">
               <span>データ保存先</span>
-              <strong>このiPhone内のみ</strong>
+              <strong>このiPhone内のみ（IndexedDB）</strong>
             </div>
             <div class="info-row">
               <span>PWA動作状態</span>
@@ -376,6 +407,8 @@
   <!-- 通知トースト -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <script src="./db.js"></script>
+  <script src="./nutrition.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
