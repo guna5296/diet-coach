@@ -1173,7 +1173,7 @@
     document.getElementById('btn-open-master-manager').addEventListener('click', () => RecordModule.openMasterManagerModal());
     document.getElementById('btn-open-backup').addEventListener('click', () => BackupModule.openBackupModal());
     document.getElementById('btn-open-policy').addEventListener('click', () => BackupModule.openPolicyModal());
-
+document.getElementById('btn-open-reset').addEventListener('click', () => BackupModule.openResetModal());
     window.addEventListener('online', () => {
       updateNetworkStatus();
       showToast('オンラインに復帰しました');
