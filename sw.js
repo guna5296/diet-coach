@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-diet-coach-v1.4.0';
+const CACHE_NAME = 'my-diet-coach-v1.5.0';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const CORE_ASSETS = [
   './nutrition.js',
   './record.js',
   './analytics.js',
+  './coach.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
