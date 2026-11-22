@@ -9,7 +9,6 @@
     settings: '設定'
   };
 
-  // 一問一答カウンセリングの質問定義（1問ずつ対話形式で実施）
   const COUNSELING_QUESTIONS = [
     {
       key: 'purpose',
@@ -97,13 +96,13 @@
     }
   ];
 
-  // デフォルト下書きデータ
   function createEmptyDraft() {
     return {
       stepIndex: 0,
       profile: {
         birthDate: '',
         gender: 'female',
+        bloodType: '',
         heightCm: '',
         currentWeight: '',
         targetWeight: '',
@@ -126,6 +125,8 @@
       },
       counseling: {},
       customReview: {
+        source: 'app', // 'app' | 'chatgpt' | 'manual'
+        typeTitle: '',
         personaText: '',
         coachingPolicy: '',
         editedByUser: false
@@ -133,9 +134,20 @@
     };
   }
 
-  // 総ステップ構成：
-  // 0: ようこそ / 1: プロフィール / 2: 健康状態 / 3: 活動量・ペース
-  // 4〜15: カウンセリング12問 / 16: 計画確認・承認
+  function mergeWithDefaultDraft(saved) {
+    const base = createEmptyDraft();
+    if (!saved) return base;
+    return {
+      ...base,
+      ...saved,
+      profile: { ...base.profile, ...(saved.profile || {}) },
+      health: { ...base.health, ...(saved.health || {}) },
+      goal: { ...base.goal, ...(saved.goal || {}) },
+      counseling: { ...(saved.counseling || {}) },
+      customReview: { ...base.customReview, ...(saved.customReview || {}) }
+    };
+  }
+
   const BASE_STEPS_BEFORE_COUNSELING = 4;
   const REVIEW_STEP_INDEX = BASE_STEPS_BEFORE_COUNSELING + COUNSELING_QUESTIONS.length;
   const TOTAL_STEPS = REVIEW_STEP_INDEX + 1;
@@ -158,10 +170,9 @@
   const navItems = document.querySelectorAll('.nav-item');
   const views = document.querySelectorAll('.view');
 
-  // 状態
-  let currentProfile = null; // 確定済みデータ
+  let currentProfile = null;
   let draft = createEmptyDraft();
-  let isEditMode = false; // 設定画面から開いた場合はtrue
+  let isEditMode = false;
   let toastTimer = null;
 
   function escapeHtml(str) {
@@ -171,6 +182,35 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  function formatMultilineHtml(str) {
+    return escapeHtml(str).replace(/\n/g, '<br>');
+  }
+
+  async function copyToClipboard(text) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (_) {
+      // フォールバックへ
+    }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (_) {
+      return false;
+    }
   }
 
   function showToast(message) {
@@ -227,8 +267,8 @@
   function renderMainAppFromProfile() {
     if (!currentProfile) return;
 
-    const { profile, plan } = currentProfile;
-    const intakeKcal = 0; // フェーズ3で当日食事集計を反映
+    const { profile, plan, customReview } = currentProfile;
+    const intakeKcal = 0;
     const remainKcal = Math.max(0, plan.targetCalories - intakeKcal);
 
     document.getElementById('home-target-kcal').textContent = `目標 ${plan.targetCalories} kcal`;
@@ -265,9 +305,13 @@
       banner.classList.add('hidden');
     }
 
-    // 設定画面サマリー
+    const typeLabel = customReview?.typeTitle
+      ? escapeHtml(customReview.typeTitle)
+      : 'パーソナライズ設定済み';
+
     const summaryEl = document.getElementById('settings-profile-summary');
     summaryEl.innerHTML = `
+      <div class="info-row"><span>診断タイプ</span><strong>${typeLabel}</strong></div>
       <div class="info-row"><span>身長 / 現在体重 / 目標体重</span><strong>${profile.heightCm}cm / ${latestW.toFixed(1)}kg / ${targetW.toFixed(1)}kg</strong></div>
       <div class="info-row"><span>推定基礎代謝 / 消費カロリー</span><strong>${plan.bmr} / ${plan.tdee} kcal</strong></div>
       <div class="info-row"><span>1日の目標カロリー</span><strong>${plan.targetCalories} kcal</strong></div>
@@ -277,10 +321,10 @@
   }
 
   /* =========================================================
-     初期登録・カウンセリング フロー制御（途中保存・再開対応）
+     初期登録・カウンセリング フロー制御
      ========================================================= */
   async function saveDraftQuietly() {
-    if (isEditMode) return; // 既存確定データの編集時は途中下書きを別管理しない
+    if (isEditMode) return;
     try {
       await DietDB.setState('onboarding_draft', draft);
     } catch (err) {
@@ -291,7 +335,7 @@
   function openOnboarding(editExisting = false, startStep = 0) {
     isEditMode = editExisting;
     if (editExisting && currentProfile) {
-      draft = JSON.parse(JSON.stringify(currentProfile));
+      draft = mergeWithDefaultDraft(JSON.parse(JSON.stringify(currentProfile)));
       draft.stepIndex = startStep;
       obBtnCancel.classList.remove('hidden');
     } else {
@@ -313,7 +357,6 @@
     const idx = draft.stepIndex;
     const progressPct = Math.round(((idx + 1) / TOTAL_STEPS) * 100);
     obProgressBar.style.width = `${progressPct}%`;
-
     obBtnBack.classList.toggle('hidden', idx === 0);
 
     if (idx === 0) {
@@ -335,10 +378,10 @@
     } else if (idx < REVIEW_STEP_INDEX) {
       const qIdx = idx - BASE_STEPS_BEFORE_COUNSELING;
       obStepLabel.textContent = `カウンセリング（${qIdx + 1} / ${COUNSELING_QUESTIONS.length}）`;
-      obBtnNext.textContent = qIdx === COUNSELING_QUESTIONS.length - 1 ? '計画を作成する' : '次の質問へ';
+      obBtnNext.textContent = qIdx === COUNSELING_QUESTIONS.length - 1 ? '分析と計画を作成する' : '次の質問へ';
       renderCounselingQuestion(qIdx);
     } else {
-      obStepLabel.textContent = 'ステップ 4/4：計画の確認・承認';
+      obStepLabel.textContent = 'ステップ 4/4：分析結果と計画の確認';
       obBtnNext.textContent = isEditMode ? 'この内容で更新する' : 'この計画ではじめる';
       renderReviewStep();
     }
@@ -346,7 +389,6 @@
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
-  // Step 0: ようこそ
   function renderWelcomeStep() {
     const hasResume = !isEditMode && draft.stepIndex === 0 && (draft.profile.heightCm || draft.profile.birthDate);
     obContent.innerHTML = `
@@ -354,7 +396,7 @@
         <div class="ob-icon-badge" aria-hidden="true">🌿</div>
         <h1 class="ob-title">My Diet Coach へようこそ</h1>
         <p class="ob-lead">
-          極端な制限ではなく、あなたの生活リズムに合わせて無理なく続けるための専用アプリです。
+          極端な制限ではなく、あなたの生活リズムや性格に合わせて無理なく続けるための専用アプリです。
         </p>
       </div>
 
@@ -367,8 +409,8 @@
             基本情報と健康状態から、無理のないカロリー・PFCバランスを自動算出します。
           </li>
           <li>
-            <strong>2. 一問ずつの初回カウンセリング</strong>
-            好みや生活リズムを少しずつお聞きし、今後のAI相談に活かします（スキップ可能）。
+            <strong>2. 一問ずつの初回カウンセリング＆タイプ分析</strong>
+            生活習慣や好みから「つまずきやすい点」と「あなた専用の攻略アプローチ」を自動で組み立てます。
           </li>
           <li>
             <strong>3. データはこのiPhone内だけに保存</strong>
@@ -379,12 +421,11 @@
     `;
   }
 
-  // Step 1: 基本プロフィール
   function renderProfileStep() {
     const p = draft.profile;
     obContent.innerHTML = `
       <h2 class="ob-title">基本プロフィール</h2>
-      <p class="ob-lead">基礎代謝と安全な目標を計算するために使用します。あとから設定画面でいつでも変更できます。</p>
+      <p class="ob-lead">基礎代謝と安全な目標、あなたに合うアプローチを分析するために使用します。</p>
 
       <article class="card">
         <div class="form-group">
@@ -392,12 +433,26 @@
           <input type="date" id="inp-birthdate" class="form-input" value="${escapeHtml(p.birthDate)}" max="${new Date().toISOString().split('T')[0]}">
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="inp-gender">性別 <span class="badge-req">必須</span></label>
-          <select id="inp-gender" class="form-select">
-            <option value="female" ${p.gender === 'female' ? 'selected' : ''}>女性</option>
-            <option value="male" ${p.gender === 'male' ? 'selected' : ''}>男性</option>
-          </select>
+        <div class="input-row">
+          <div class="form-group">
+            <label class="form-label" for="inp-gender">性別 <span class="badge-req">必須</span></label>
+            <select id="inp-gender" class="form-select">
+              <option value="female" ${p.gender === 'female' ? 'selected' : ''}>女性</option>
+              <option value="male" ${p.gender === 'male' ? 'selected' : ''}>男性</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inp-bloodtype">血液型 <span class="badge-opt">任意</span></label>
+            <select id="inp-bloodtype" class="form-select">
+              <option value="" ${!p.bloodType ? 'selected' : ''}>未選択</option>
+              <option value="A" ${p.bloodType === 'A' ? 'selected' : ''}>A型</option>
+              <option value="B" ${p.bloodType === 'B' ? 'selected' : ''}>B型</option>
+              <option value="O" ${p.bloodType === 'O' ? 'selected' : ''}>O型</option>
+              <option value="AB" ${p.bloodType === 'AB' ? 'selected' : ''}>AB型</option>
+              <option value="skip" ${p.bloodType === 'skip' ? 'selected' : ''}>回答しない</option>
+            </select>
+          </div>
         </div>
 
         <div class="form-group">
@@ -437,7 +492,6 @@
     `;
   }
 
-  // Step 2: 健康状態の確認
   function renderHealthStep() {
     const h = draft.health;
     const renderRadioGroup = (name, label, options, currentVal, noteKey, notePlaceholder) => {
@@ -502,8 +556,7 @@
 
     obContent.querySelectorAll('[data-health-key]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const key = btn.dataset.healthKey;
-        draft.health[key] = btn.dataset.healthVal;
+        draft.health[btn.dataset.healthKey] = btn.dataset.healthVal;
         saveDraftQuietly();
         renderHealthStep();
       });
@@ -517,7 +570,6 @@
     });
   }
 
-  // Step 3: 活動量・減量ペース
   function renderGoalStep() {
     const g = draft.goal;
     const actCards = Object.entries(NutritionEngine.ACTIVITY_LEVELS).map(([key, info]) => `
@@ -561,7 +613,6 @@
     });
   }
 
-  // Step 4〜15: 一問一答カウンセリング
   function renderCounselingQuestion(qIdx) {
     const q = COUNSELING_QUESTIONS[qIdx];
     const saved = draft.counseling[q.key] || { selected: [], text: '' };
@@ -605,6 +656,8 @@
         if (pos >= 0) arr.splice(pos, 1);
         else arr.push(val);
         btn.classList.toggle('selected', pos < 0);
+        // 回答変更時は自動分析を最新化できるようにフラグを戻す（ChatGPT取り込み済みを除く）
+        if (draft.customReview.source === 'app') draft.customReview.editedByUser = false;
         saveDraftQuietly();
       });
     });
@@ -613,6 +666,7 @@
     textarea.addEventListener('input', () => {
       if (!draft.counseling[q.key]) draft.counseling[q.key] = { selected: [], text: '' };
       draft.counseling[q.key].text = textarea.value;
+      if (draft.customReview.source === 'app') draft.customReview.editedByUser = false;
       saveDraftQuietly();
     });
 
@@ -624,7 +678,6 @@
     });
   }
 
-  // カウンセリング回答を文字列に整形したコピーを作成
   function flattenCounselingForSummary() {
     const out = {};
     COUNSELING_QUESTIONS.forEach((q) => {
@@ -643,17 +696,32 @@
     return out;
   }
 
-  // Step 16: ダイエット計画と人物像の確認・承認
+  // ChatGPT出力から【診断タイプ】を抜き出す補助関数
+  function extractTypeTitle(text, fallback) {
+    const m = String(text || '').match(/【診断タイプ】\s*([^\n]+)/);
+    return m && m[1] ? m[1].trim() : fallback;
+  }
+
+  // Step 16: 分析結果とダイエット計画の確認・承認（案2：アプリ内分析標準＋ChatGPT深掘り併設）
   function renderReviewStep() {
     const plan = NutritionEngine.buildPlan(draft);
     const flatCounseling = flattenCounselingForSummary();
-    const generated = NutritionEngine.buildPersonaSummary({ ...draft, counseling: flatCounseling }, plan);
+    const autoAnalysis = NutritionEngine.buildPersonalizedAnalysis(draft, plan, flatCounseling);
 
-    if (!draft.customReview.editedByUser) {
-      draft.customReview.personaText = generated.personaText;
-      draft.customReview.coachingPolicy = generated.coachingPolicy;
+    // 初回表示または未編集時は最新のアプリ内自動分析をセット
+    if (!draft.customReview.editedByUser || !draft.customReview.personaText) {
+      draft.customReview = {
+        source: 'app',
+        typeTitle: autoAnalysis.typeTitle,
+        personaText: autoAnalysis.personaText,
+        coachingPolicy: autoAnalysis.coachingPolicy,
+        editedByUser: false
+      };
+    } else if (!draft.customReview.typeTitle) {
+      draft.customReview.typeTitle = extractTypeTitle(draft.customReview.personaText, autoAnalysis.typeTitle);
     }
 
+    const isCustomOrGpt = draft.customReview.source === 'chatgpt' || draft.customReview.source === 'manual';
     const warningsHtml = plan.warnings.map((w) => `<div class="alert-box warning">${escapeHtml(w)}</div>`).join('');
 
     const periodText = plan.estimatedWeeks
@@ -662,12 +730,76 @@
         ? '安全優先のため減量期間は自動設定しません'
         : '維持・生活リズム改善ペース';
 
+    // 分析カードの中身（アプリ自動分析時は構造化カード、ChatGPT取り込み／手動編集時は整形テキスト表示）
+    const analysisBodyHtml = !isCustomOrGpt
+      ? `
+        <div class="analysis-type-wrap">
+          <span class="analysis-badge">あなた専用のダイエット傾向</span>
+          <h3 class="analysis-type-title">${escapeHtml(autoAnalysis.typeTitle)}</h3>
+        </div>
+        <p class="analysis-paragraph">${formatMultilineHtml(autoAnalysis.profileAnalysis)}</p>
+
+        <div class="analysis-section-label">最初の2週間の攻略アプローチ</div>
+        <ol class="approach-list">
+          ${autoAnalysis.approaches.map((ap, i) => `
+            <li class="approach-item">
+              <span class="approach-num">${i + 1}</span>
+              <div>
+                <strong>${escapeHtml(ap.title)}</strong>
+                <p>${escapeHtml(ap.detail)}</p>
+              </div>
+            </li>
+          `).join('')}
+        </ol>
+
+        <div class="coach-promise-box">
+          <span class="promise-label">コーチからの約束</span>
+          <p>${escapeHtml(draft.customReview.coachingPolicy)}</p>
+        </div>
+      `
+      : `
+        <div class="analysis-type-wrap">
+          <span class="analysis-badge ${draft.customReview.source === 'chatgpt' ? 'gpt' : ''}">
+            ${draft.customReview.source === 'chatgpt' ? 'ChatGPT 精密分析を反映中' : 'カスタム編集済み'}
+          </span>
+          <h3 class="analysis-type-title">${escapeHtml(draft.customReview.typeTitle)}</h3>
+        </div>
+        <div class="analysis-custom-text">${formatMultilineHtml(draft.customReview.personaText)}</div>
+        <div class="coach-promise-box">
+          <span class="promise-label">コーチからの約束</span>
+          <p>${formatMultilineHtml(draft.customReview.coachingPolicy)}</p>
+        </div>
+      `;
+
     obContent.innerHTML = `
-      <h2 class="ob-title">あなたの初期ダイエット計画</h2>
-      <p class="ob-lead">まずはこの推定値で2〜4週間記録し、体重の推移と体調を見ながら柔軟に調整していきましょう。</p>
+      <h2 class="ob-title">あなたの分析結果と初期計画</h2>
+      <p class="ob-lead">まずはこの作戦と推定目安で2〜4週間記録し、体重の推移と体調を見ながら柔軟に調整していきましょう。</p>
 
       ${warningsHtml}
 
+      <!-- アプリ内パーソナライズ分析カード -->
+      <article class="card analysis-card">
+        ${analysisBodyHtml}
+
+        <div class="analysis-footer-actions">
+          <button type="button" id="btn-toggle-manual-edit" class="text-btn">文章を自分で微調整する</button>
+          ${isCustomOrGpt ? `<button type="button" id="btn-reset-auto-analysis" class="text-btn muted">アプリ自動分析に戻す</button>` : ''}
+        </div>
+
+        <div id="manual-edit-panel" class="manual-edit-panel hidden">
+          <div class="form-group">
+            <label class="form-label" for="inp-persona">分析・攻略アプローチ（編集可）</label>
+            <textarea id="inp-persona" class="form-textarea" rows="7">${escapeHtml(draft.customReview.personaText)}</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="inp-policy">コーチからの約束（編集可）</label>
+            <textarea id="inp-policy" class="form-textarea" rows="3">${escapeHtml(draft.customReview.coachingPolicy)}</textarea>
+          </div>
+          <button type="button" id="btn-apply-manual-edit" class="btn-secondary full-width">微調整を反映する</button>
+        </div>
+      </article>
+
+      <!-- 数値計画カード -->
       <article class="card">
         <div class="card-header">
           <h3 class="card-title">1日の栄養目標（初期推定値）</h3>
@@ -699,40 +831,109 @@
         <p class="form-hint">達成ペースの目安：${escapeHtml(periodText)}</p>
       </article>
 
-      <article class="card">
+      <!-- 案2：ChatGPT精密分析オプション（任意） -->
+      <article class="card deep-ai-card">
         <div class="card-header">
-          <h3 class="card-title">人物像・コーチング方針</h3>
-          <span class="card-sub">修正できます</span>
+          <h3 class="card-title">ChatGPTでさらに詳しく分析する</h3>
+          <span class="badge-opt">任意</span>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="inp-persona">カウンセリングのまとめ</label>
-          <textarea id="inp-persona" class="form-textarea" rows="6">${escapeHtml(draft.customReview.personaText)}</textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="inp-policy">AIコーチングの方針</label>
-          <textarea id="inp-policy" class="form-textarea" rows="3">${escapeHtml(draft.customReview.coachingPolicy)}</textarea>
-          <p class="form-hint">この内容は今後のChatGPT相談時に自動で引き継がれます。</p>
+        <p class="deep-ai-desc">
+          そのまま始めても大丈夫です。より踏み込んだオーダーメイド分析にしたい場合は、下のボタンで指示文をコピーしてChatGPTに貼り付け、返ってきた文章をここに取り込めます。
+        </p>
+
+        <button type="button" id="btn-copy-deep-prompt" class="btn-secondary full-width">
+          1. ChatGPT用の精密分析プロンプトをコピー
+        </button>
+
+        <div class="deep-ai-paste-area">
+          <label class="form-label" for="inp-gpt-paste">2. ChatGPTの分析結果を貼り付け</label>
+          <textarea id="inp-gpt-paste" class="form-textarea" rows="4" placeholder="ChatGPTから返ってきた分析文をここに貼り付けて、下のボタンを押してください"></textarea>
+          <button type="button" id="btn-apply-gpt-analysis" class="btn-outline full-width" style="margin-top: 8px;">
+            この分析結果をアプリに反映する
+          </button>
         </div>
       </article>
     `;
 
-    const personaInput = document.getElementById('inp-persona');
-    const policyInput = document.getElementById('inp-policy');
-    const markEdited = () => {
-      draft.customReview.personaText = personaInput.value;
-      draft.customReview.coachingPolicy = policyInput.value;
-      draft.customReview.editedByUser = true;
+    // 微調整パネルの開閉
+    const manualPanel = document.getElementById('manual-edit-panel');
+    document.getElementById('btn-toggle-manual-edit').addEventListener('click', () => {
+      manualPanel.classList.toggle('hidden');
+    });
+
+    // 手動微調整の反映
+    document.getElementById('btn-apply-manual-edit').addEventListener('click', () => {
+      const pText = document.getElementById('inp-persona').value.trim();
+      const cPolicy = document.getElementById('inp-policy').value.trim();
+      if (!pText) {
+        showToast('分析内容を入力してください');
+        return;
+      }
+      draft.customReview = {
+        source: 'manual',
+        typeTitle: extractTypeTitle(pText, draft.customReview.typeTitle || autoAnalysis.typeTitle),
+        personaText: pText,
+        coachingPolicy: cPolicy || autoAnalysis.coachingPolicy,
+        editedByUser: true
+      };
       saveDraftQuietly();
-    };
-    personaInput.addEventListener('input', markEdited);
-    policyInput.addEventListener('input', markEdited);
+      showToast('内容を更新しました');
+      renderReviewStep();
+    });
+
+    // アプリ自動分析へリセット
+    const resetBtn = document.getElementById('btn-reset-auto-analysis');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        draft.customReview = {
+          source: 'app',
+          typeTitle: autoAnalysis.typeTitle,
+          personaText: autoAnalysis.personaText,
+          coachingPolicy: autoAnalysis.coachingPolicy,
+          editedByUser: false
+        };
+        saveDraftQuietly();
+        showToast('アプリの自動分析に戻しました');
+        renderReviewStep();
+      });
+    }
+
+    // ChatGPT精密分析プロンプトのコピー
+    document.getElementById('btn-copy-deep-prompt').addEventListener('click', async () => {
+      const promptText = NutritionEngine.buildDeepAnalysisPrompt(draft, plan, flatCounseling);
+      const ok = await copyToClipboard(promptText);
+      if (ok) {
+        showToast('コピーしました！ChatGPTにそのまま貼り付けてください');
+      } else {
+        showToast('コピーに失敗しました。ブラウザの権限を確認してください');
+      }
+    });
+
+    // ChatGPT分析結果の取り込み
+    document.getElementById('btn-apply-gpt-analysis').addEventListener('click', () => {
+      const pasted = document.getElementById('inp-gpt-paste').value.trim();
+      if (!pasted) {
+        showToast('ChatGPTの回答を貼り付けてから押してください');
+        return;
+      }
+      draft.customReview = {
+        source: 'chatgpt',
+        typeTitle: extractTypeTitle(pasted, autoAnalysis.typeTitle),
+        personaText: pasted,
+        coachingPolicy: draft.customReview.coachingPolicy || autoAnalysis.coachingPolicy,
+        editedByUser: true
+      };
+      saveDraftQuietly();
+      showToast('ChatGPTの精密分析を反映しました');
+      renderReviewStep();
+    });
   }
 
-  // ステップ検証と「次へ」処理
   function validateAndCollectCurrentStep() {
     if (draft.stepIndex === 1) {
       const birthDate = document.getElementById('inp-birthdate').value;
       const gender = document.getElementById('inp-gender').value;
+      const bloodType = document.getElementById('inp-bloodtype').value;
       const heightCm = Number(document.getElementById('inp-height').value);
       const currentWeight = Number(document.getElementById('inp-weight').value);
       const targetWeight = Number(document.getElementById('inp-target-weight').value);
@@ -764,14 +965,18 @@
       draft.profile = {
         birthDate,
         gender,
+        bloodType,
         heightCm,
         currentWeight,
         targetWeight,
         bodyFat,
         targetPeriod
       };
-      // プロフィール変更時は確認画面の自動文章を再生成可能にする
-      if (!isEditMode) draft.customReview.editedByUser = false;
+
+      // 生年月日や血液型を変えた場合、ChatGPT取り込み済みでなければ自動分析を再計算させる
+      if (draft.customReview.source === 'app') {
+        draft.customReview.editedByUser = false;
+      }
     }
     return true;
   }
@@ -786,18 +991,22 @@
       return;
     }
 
-    // 最終承認・IndexedDBへ保存
     const plan = NutritionEngine.buildPlan(draft);
+    const flatCounseling = flattenCounselingForSummary();
+    const autoAnalysis = NutritionEngine.buildPersonalizedAnalysis(draft, plan, flatCounseling);
+
     const finalRecord = {
       profile: draft.profile,
       health: draft.health,
       goal: draft.goal,
       counseling: draft.counseling,
-      counselingSummary: flattenCounselingForSummary(),
+      counselingSummary: flatCounseling,
       customReview: {
-        personaText: draft.customReview.personaText,
-        coachingPolicy: draft.customReview.coachingPolicy,
-        editedByUser: true
+        source: draft.customReview.source || 'app',
+        typeTitle: draft.customReview.typeTitle || autoAnalysis.typeTitle,
+        personaText: draft.customReview.personaText || autoAnalysis.personaText,
+        coachingPolicy: draft.customReview.coachingPolicy || autoAnalysis.coachingPolicy,
+        editedByUser: draft.customReview.source !== 'app'
       },
       plan,
       approvedAt: new Date().toISOString()
@@ -810,7 +1019,7 @@
       isEditMode = false;
       closeOnboardingToApp();
       navigateTo('home');
-      showToast('ダイエット計画を保存しました');
+      showToast('分析結果とダイエット計画を保存しました');
     } catch (err) {
       console.error('保存エラー:', err);
       showToast('保存に失敗しました。もう一度お試しください');
@@ -824,9 +1033,6 @@
     renderOnboardingStep();
   }
 
-  /* =========================================================
-     Service Worker・イベント初期化・アプリ起動
-     ========================================================= */
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
     if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
@@ -871,13 +1077,13 @@
     try {
       const savedProfile = await DietDB.getState('user_profile');
       if (savedProfile) {
-        currentProfile = savedProfile;
+        currentProfile = mergeWithDefaultDraft(savedProfile);
+        currentProfile.plan = savedProfile.plan;
+        currentProfile.approvedAt = savedProfile.approvedAt;
         closeOnboardingToApp();
       } else {
         const savedDraft = await DietDB.getState('onboarding_draft');
-        if (savedDraft) {
-          draft = { ...createEmptyDraft(), ...savedDraft };
-        }
+        draft = mergeWithDefaultDraft(savedDraft);
         openOnboarding(false, draft.stepIndex || 0);
       }
     } catch (err) {
